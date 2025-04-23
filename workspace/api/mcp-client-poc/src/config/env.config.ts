@@ -10,11 +10,11 @@ export default registerAs('app', () => ({
     mcp: {
         s3: {
             transport: 'sse' as const,
-            url: 'http://localhost:8001/sse',
+            url: process.env.MCP_S3_URL || 'http://localhost:8001/sse',
         },
         postgres: {
             transport: 'sse' as const,
-            url: 'http://localhost:8002/sse',
+            url: process.env.MCP_POSTGRES_URL || 'http://localhost:8002/sse',
         },
     },
 }));

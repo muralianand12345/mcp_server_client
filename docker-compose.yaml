@@ -1,4 +1,7 @@
+version: "3.8"
+
 services:
+    # LocalStack for S3 emulation
     localstack:
         image: localstack/localstack:0.12.5
         container_name: localstack
@@ -9,6 +12,112 @@ services:
         volumes:
             - "./localstack:/tmp/localstack"
             - "/var/run/docker.sock:/var/run/docker.sock"
-        env_file:
-            - .env
-    
+        environment:
+            - SERVICES=s3
+            - DEBUG=1
+            - DATA_DIR=/tmp/localstack/data
+            - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-test}
+            - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-test}
+            - AWS_DEFAULT_REGION=${AWS_REGION:-us-east-1}
+        networks:
+            - mcp-network
+
+    # Postgres Database
+    postgres:
+        image: postgres:15.3
+        container_name: postgres
+        environment:
+            - POSTGRES_USER=${POSTGRES_USER:-postgres}
+            - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+            - POSTGRES_DB=${POSTGRES_DB:-postgres}
+        ports:
+            - "5432:5432"
+        volumes:
+            - postgres_data:/var/lib/postgresql/data
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U postgres"]
+            interval: 5s
+            timeout: 5s
+            retries: 5
+        networks:
+            - mcp-network
+
+    # MCP Server 1 (S3 Search Service)
+    mcp_server1:
+        build:
+            context: .
+            dockerfile: Dockerfile.mcp_server1
+        container_name: mcp_server1
+        ports:
+            - "8001:8001"
+        environment:
+            - PYTHONUNBUFFERED=1
+            - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-test}
+            - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-test}
+            - AWS_REGION=${AWS_REGION:-us-east-1}
+            - AWS_ENDPOINT_URL=http://localstack:4566
+        depends_on:
+            - localstack
+        command: python /app/workspace/servers/mcp_server_1.py
+        networks:
+            - mcp-network
+
+    # MCP Server 2 (Postgres Search Service)
+    mcp_server2:
+        build:
+            context: .
+            dockerfile: Dockerfile.mcp_server2
+        container_name: mcp_server2
+        ports:
+            - "8002:8002"
+        environment:
+            - PYTHONUNBUFFERED=1
+            - POSTGRES_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-postgres}
+        depends_on:
+            postgres:
+                condition: service_healthy
+        command: python /app/workspace/servers/mcp_server_2.py
+        networks:
+            - mcp-network
+
+    # NestJS API
+    api:
+        build:
+            context: ./workspace/api/mcp-client-poc
+            dockerfile: Dockerfile
+        container_name: mcp_api
+        ports:
+            - "3000:3000"
+        environment:
+            - PORT=3000
+            - OPENAI_API_KEY=${OPENAI_API_KEY}
+            - MCP_S3_URL=http://mcp_server1:8001/sse
+            - MCP_POSTGRES_URL=http://mcp_server2:8002/sse
+        depends_on:
+            - mcp_server1
+            - mcp_server2
+        networks:
+            - mcp-network
+
+    # Streamlit UI
+    streamlit:
+        build:
+            context: ./workspace/frontend
+            dockerfile: Dockerfile
+        container_name: mcp_streamlit
+        ports:
+            - "8501:8501"
+        environment:
+            - PYTHONUNBUFFERED=1
+            - API_URL=http://api:3000
+        depends_on:
+            - api
+        networks:
+            - mcp-network
+
+networks:
+    mcp-network:
+        driver: bridge
+
+volumes:
+    postgres_data:
