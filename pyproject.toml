@@ -1,0 +1,21 @@
+[project]
+name = "mcp-stack"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "boto3>=1.37.38",
+    "fastmcp>=0.4.1",
+    "mcp[cli]>=1.6.0",
+    "numpy>=2.2.4",
+    "openai>=1.70.0",
+    "psycopg2>=2.9.10",
+    "pydantic-ai>=0.0.48",
+    "python-dotenv>=1.1.0",
+    "requests>=2.32.3",
+    "streamlit>=1.44.0",
+]
+
+[tool.uv.workspace]
+members = ["workspace/frontend"]
