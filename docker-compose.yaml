@@ -90,12 +90,14 @@ services:
             - "3000:3000"
         environment:
             - PORT=3000
-            - OPENAI_API_KEY=${ }
+            - OPENAI_API_KEY=${OPENAI_API_KEY}
             - MCP_S3_URL=http://mcp_server1:8001/sse
             - MCP_POSTGRES_URL=http://mcp_server2:8002/sse
         depends_on:
             - mcp_server1
             - mcp_server2
+        command: >
+            sh -c "sleep 10 && npm run start"
         networks:
             - mcp-network
 

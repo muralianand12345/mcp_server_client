@@ -13,24 +13,17 @@ export class McpClientService implements OnModuleInit, OnModuleDestroy {
     async onModuleInit() {
         try {
             const mcpServers = this.configService.get('app.mcp');
-            this.logger.log(`Initializing MCP Client with servers: ${JSON.stringify(mcpServers)}`);
-
             this.client = new MultiServerMCPClient(mcpServers);
-            this.logger.log('MCP Client initialized');
-
             // Add retry logic with delay
             let attempts = 0;
             const maxAttempts = 5;
 
             while (attempts < maxAttempts) {
                 try {
-                    this.logger.log(`Attempt ${attempts + 1}/${maxAttempts} to get tools...`);
                     const tools = await this.client.getTools();
-                    this.logger.log(`Retrieved tools: ${JSON.stringify(tools)}`);
 
                     if (tools && tools.length > 0) {
                         this.tools = tools;
-                        this.logger.log(`Successfully loaded ${tools.length} tools`);
                         break;
                     } else {
                         this.logger.warn('No tools found, will retry after delay');
@@ -61,7 +54,6 @@ export class McpClientService implements OnModuleInit, OnModuleDestroy {
                 const tools = await this.client.getTools();
                 if (tools && tools.length > 0) {
                     this.tools = tools;
-                    this.logger.log(`Refreshed tools, now have ${tools.length}`);
                 }
             } catch (error) {
                 this.logger.error(`Failed to refresh tools: ${error.message}`);

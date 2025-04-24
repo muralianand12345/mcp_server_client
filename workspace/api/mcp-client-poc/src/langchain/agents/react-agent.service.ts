@@ -9,7 +9,6 @@ import { McpClientService } from '../clients/mcp-client.service';
 export class ReactAgentService {
     private agent: any;
     private model: ChatOpenAI;
-    private readonly logger = new Logger(ReactAgentService.name);
 
     constructor(
         private configService: ConfigService,
@@ -25,7 +24,6 @@ export class ReactAgentService {
     async processMessage(messages: (HumanMessage | AIMessage)[]) {
         try {
             const tools = await this.mcpClientService.getTools();
-            this.logger.log(`Tools: ${JSON.stringify(tools)}`);
 
             if (!tools || tools.length === 0) {
                 throw new Error("No tools available from MCP servers");
@@ -44,7 +42,6 @@ export class ReactAgentService {
                 lastMessage: new AIMessage(reply)
             };
         } catch (error) {
-            this.logger.error(`Agent error: ${error.message}`);
             throw new Error(`Agent error: ${error.message}`);
         }
     }
