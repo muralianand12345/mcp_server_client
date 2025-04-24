@@ -18,4 +18,4 @@ dependencies = [
 ]
 
 [tool.uv.workspace]
-members = ["workspace/frontend"]
+members = ["workspace/frontend", "workspace/data_processing"]

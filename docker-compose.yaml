@@ -24,14 +24,14 @@ services:
 
     # Postgres Database
     postgres:
-        image: postgres:15.3
+        image: pgvector/pgvector:pg15
         container_name: postgres
         environment:
             - POSTGRES_USER=${POSTGRES_USER:-postgres}
             - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
             - POSTGRES_DB=${POSTGRES_DB:-postgres}
         ports:
-            - "5432:5432"
+            - "5435:5432"
         volumes:
             - postgres_data:/var/lib/postgresql/data
         healthcheck:
