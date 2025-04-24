@@ -2,14 +2,13 @@ import streamlit as st
 import requests
 import uuid
 import os
-import json
 from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
 
 # API URL
-API_URL = os.getenv("API_URL", "http://api:3000")
+API_URL = os.getenv("API_URL", "http://localhost:3000")
 
 # Set page configuration
 st.set_page_config(page_title="AI Chat Assistant", page_icon="🤖", layout="centered")
@@ -26,10 +25,9 @@ st.title("AI Chat Assistant")
 st.markdown("Ask questions about your S3 or Postgres data!")
 
 
-# Function to call the API with better error handling
+# Function to call the API
 def query_agent(message):
     try:
-        st.write(f"Trying to connect to: {API_URL}/chat")
         response = requests.post(
             f"{API_URL}/chat",
             headers={
@@ -37,26 +35,14 @@ def query_agent(message):
                 "session-id": st.session_state.session_id,
             },
             json={"message": message},
-            timeout=120,
+            timeout=120,  # Increased timeout for complex queries
         )
 
-        # Log response status and headers for debugging
-        st.write(f"Response status: {response.status_code}")
-        st.write(f"Response headers: {dict(response.headers)}")
-
-        # If we get an error, try to parse the response
-        if response.status_code >= 400:
-            try:
-                error_content = response.json()
-                return (
-                    f"Error from API: {error_content.get('message', 'Unknown error')}"
-                )
-            except:
-                return f"Error {response.status_code}: {response.text[:500]}"
-
+        response.raise_for_status()
         return response.json()["response"]
     except requests.exceptions.RequestException as e:
-        return f"Error connecting to API: {str(e)}"
+        st.error(f"Error connecting to API: {str(e)}")
+        return "Sorry, I couldn't connect to the API. Please try again later."
 
 
 # Clear chat button
@@ -109,16 +95,3 @@ with st.sidebar:
     st.subheader("Session Information")
     st.info(f"Session ID: {st.session_state.session_id}")
     st.caption("This ID is used to maintain your chat history")
-
-    # Add debug section
-    st.subheader("Debug Information")
-    st.write(f"API URL: {API_URL}")
-
-    # Button to test API connection
-    if st.button("Test API Connection"):
-        try:
-            response = requests.get(f"{API_URL}")
-            st.write(f"Status: {response.status_code}")
-            st.write(f"Content: {response.text[:200]}...")
-        except Exception as e:
-            st.error(f"Connection error: {str(e)}")
