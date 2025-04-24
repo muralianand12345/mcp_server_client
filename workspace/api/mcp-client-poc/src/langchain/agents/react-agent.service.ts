@@ -25,9 +25,14 @@ export class ReactAgentService {
     async processMessage(messages: (HumanMessage | AIMessage)[]) {
         try {
             const tools = await this.mcpClientService.getTools();
-            this.logger.log(`Tools: ${tools}`);
+            this.logger.log(`Tools: ${JSON.stringify(tools)}`);
+
+            if (!tools || tools.length === 0) {
+                throw new Error("No tools available from MCP servers");
+            }
+
             this.agent = createReactAgent({ llm: this.model, tools });
-            
+
             const result = await this.agent.invoke({ messages });
             const lastMsg = result.messages[result.messages.length - 1];
             const reply = typeof lastMsg.content === 'string'
@@ -39,6 +44,7 @@ export class ReactAgentService {
                 lastMessage: new AIMessage(reply)
             };
         } catch (error) {
+            this.logger.error(`Agent error: ${error.message}`);
             throw new Error(`Agent error: ${error.message}`);
         }
     }

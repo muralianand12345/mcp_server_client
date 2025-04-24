@@ -11,8 +11,41 @@ export class McpClientService implements OnModuleInit, OnModuleDestroy {
     constructor(private configService: ConfigService) { }
 
     async onModuleInit() {
-        const mcpServers = this.configService.get('app.mcp');
-        this.client = new MultiServerMCPClient(mcpServers);
+        try {
+            const mcpServers = this.configService.get('app.mcp');
+            this.logger.log(`Initializing MCP Client with servers: ${JSON.stringify(mcpServers)}`);
+
+            this.client = new MultiServerMCPClient(mcpServers);
+            this.logger.log('MCP Client initialized');
+
+            // Add retry logic with delay
+            let attempts = 0;
+            const maxAttempts = 5;
+
+            while (attempts < maxAttempts) {
+                try {
+                    this.logger.log(`Attempt ${attempts + 1}/${maxAttempts} to get tools...`);
+                    const tools = await this.client.getTools();
+                    this.logger.log(`Retrieved tools: ${JSON.stringify(tools)}`);
+
+                    if (tools && tools.length > 0) {
+                        this.tools = tools;
+                        this.logger.log(`Successfully loaded ${tools.length} tools`);
+                        break;
+                    } else {
+                        this.logger.warn('No tools found, will retry after delay');
+                    }
+                } catch (error) {
+                    this.logger.error(`Error getting tools: ${error.message}`);
+                }
+
+                attempts++;
+                // Wait 5 seconds before next attempt
+                await new Promise(resolve => setTimeout(resolve, 5000));
+            }
+        } catch (error) {
+            this.logger.error(`Failed to initialize MCP client: ${error.message}`);
+        }
     }
 
     async onModuleDestroy() {
@@ -22,7 +55,18 @@ export class McpClientService implements OnModuleInit, OnModuleDestroy {
     }
 
     async getTools() {
-        this.logger.log(this.tools)
-        return await this.client.getTools();
+        if (this.tools.length === 0) {
+            this.logger.warn('No tools available, attempting to fetch again');
+            try {
+                const tools = await this.client.getTools();
+                if (tools && tools.length > 0) {
+                    this.tools = tools;
+                    this.logger.log(`Refreshed tools, now have ${tools.length}`);
+                }
+            } catch (error) {
+                this.logger.error(`Failed to refresh tools: ${error.message}`);
+            }
+        }
+        return this.tools.length > 0 ? this.tools : await this.client.getTools();
     }
 }
