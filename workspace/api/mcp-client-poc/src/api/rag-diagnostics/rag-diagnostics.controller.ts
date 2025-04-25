@@ -3,6 +3,12 @@ import { RagService } from '../../langchain/services/rag.service';
 import { McpClientService } from '../../langchain/clients/mcp-client.service';
 import { VectorSearchService } from '../../langchain/services/vector-search.service';
 
+interface ToolTestResult {
+    status: string;
+    message: string;
+    response?: string;
+}
+
 @Controller('rag')
 export class RagDiagnosticsController {
     private readonly logger = new Logger(RagDiagnosticsController.name);
@@ -203,5 +209,95 @@ export class RagDiagnosticsController {
             service: 'rag',
             timestamp: new Date().toISOString()
         };
+    }
+
+    @Get('tools')
+    async getAvailableTools() {
+        try {
+            this.logger.log('Getting list of available tools');
+
+            // Get all tools
+            const tools = await this.mcpClientService.getTools();
+
+            // Classify tools into categories
+            const s3Tools = tools
+                .filter(t => t.name.toLowerCase().includes('s3') ||
+                    t.name.toLowerCase().includes('bucket') ||
+                    ['list_buckets', 'search_objects', 'get_object_content'].some(name =>
+                        t.name.toLowerCase().includes(name.toLowerCase())))
+                .map(t => ({
+                    name: t.name,
+                    description: t.description?.substring(0, 100) + (t.description?.length > 100 ? '...' : '')
+                }));
+
+            const postgresTools = tools
+                .filter(t => t.name.toLowerCase().includes('postgres') ||
+                    t.name.toLowerCase().includes('sql') ||
+                    ['query', 'list_schemas', 'describe_table'].some(name =>
+                        t.name.toLowerCase().includes(name.toLowerCase())))
+                .map(t => ({
+                    name: t.name,
+                    description: t.description?.substring(0, 100) + (t.description?.length > 100 ? '...' : '')
+                }));
+
+            const otherTools = tools
+                .filter(t => !s3Tools.some(s3 => s3.name === t.name) &&
+                    !postgresTools.some(pg => pg.name === t.name))
+                .map(t => ({
+                    name: t.name,
+                    description: t.description?.substring(0, 100) + (t.description?.length > 100 ? '...' : '')
+                }));
+
+            // Try to test a basic tool function
+            let testResult: ToolTestResult = { status: 'not_tested', message: 'No test performed' };
+
+            try {
+                // Test listing buckets if available
+                const listBucketsTool = this.mcpClientService.getToolByName('list_buckets');
+                if (listBucketsTool) {
+                    const response = await listBucketsTool.invoke({});
+                    testResult = {
+                        status: 'success',
+                        message: 'Successfully called list_buckets tool',
+                        response: JSON.stringify(response).substring(0, 500)
+                    };
+                } else {
+                    // Try testing a query tool if available
+                    const queryTool = this.mcpClientService.getToolByName('query');
+                    if (queryTool) {
+                        const response = await queryTool.invoke({
+                            sql: 'SELECT current_timestamp as time'
+                        });
+                        testResult = {
+                            status: 'success',
+                            message: 'Successfully called query tool',
+                            response: JSON.stringify(response).substring(0, 500)
+                        };
+                    }
+                }
+            } catch (error) {
+                testResult = {
+                    status: 'error',
+                    message: `Error testing tools: ${error.message}`
+                };
+            }
+
+            // Return tool information
+            return {
+                status: 'success',
+                toolCount: tools.length,
+                s3Tools,
+                postgresTools,
+                otherTools,
+                testResult,
+                timestamp: new Date().toISOString()
+            };
+        } catch (error) {
+            this.logger.error(`Error getting tools: ${error.message}`);
+            throw new HttpException(
+                `Error getting tools: ${error.message}`,
+                HttpStatus.INTERNAL_SERVER_ERROR,
+            );
+        }
     }
 }

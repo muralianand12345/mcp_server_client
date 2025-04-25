@@ -2,6 +2,17 @@ import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/commo
 import { ConfigService } from '@nestjs/config';
 import { MultiServerMCPClient } from '@langchain/mcp-adapters';
 
+// Define interface for tool names
+interface ToolNameVariants {
+    [key: string]: string[];
+}
+
+// Define interface for tool categories
+interface RequiredToolSets {
+    s3: ToolNameVariants;
+    postgres: ToolNameVariants;
+}
+
 @Injectable()
 export class McpClientService implements OnModuleInit, OnModuleDestroy {
     private client: MultiServerMCPClient;
@@ -161,13 +172,37 @@ export class McpClientService implements OnModuleInit, OnModuleDestroy {
      * Helper method to check if specific tools are available
      */
     hasRequiredTools(): boolean {
-        const requiredS3Tools = ['list_buckets', 'search_objects', 'get_object_content'];
-        const requiredPgTools = ['query', 'list_schemas', 'describe_table'];
+        // Define required tool categories and possible names
+        const requiredToolSets: RequiredToolSets = {
+            s3: {
+                listBuckets: ['list_buckets', 'mcp__s3__list_buckets', 'listbuckets'],
+                searchObjects: ['search_objects', 'mcp__s3__search_objects', 'searchobjects'],
+                getObjectContent: ['get_object_content', 'mcp__s3__get_object_content', 'getobjectcontent']
+            },
+            postgres: {
+                query: ['query', 'mcp__postgres__query', 'execute_query', 'sql'],
+                listSchemas: ['list_schemas', 'mcp__postgres__list_schemas', 'listschemas'],
+                describeTable: ['describe_table', 'mcp__postgres__describe_table', 'describetable']
+            }
+        };
 
-        const availableToolNames = this.tools.map(tool => tool.name);
+        const availableToolNames = this.tools.map(tool => tool.name.toLowerCase());
 
-        const missingS3Tools = requiredS3Tools.filter(tool => !availableToolNames.includes(tool));
-        const missingPgTools = requiredPgTools.filter(tool => !availableToolNames.includes(tool));
+        // Check for S3 tools
+        const missingS3Tools: string[] = [];
+        Object.entries(requiredToolSets.s3).forEach(([key, nameVariants]) => {
+            if (!nameVariants.some(variant => availableToolNames.some(name => name.includes(variant.toLowerCase())))) {
+                missingS3Tools.push(key);
+            }
+        });
+
+        // Check for Postgres tools
+        const missingPgTools: string[] = [];
+        Object.entries(requiredToolSets.postgres).forEach(([key, nameVariants]) => {
+            if (!nameVariants.some(variant => availableToolNames.some(name => name.includes(variant.toLowerCase())))) {
+                missingPgTools.push(key);
+            }
+        });
 
         if (missingS3Tools.length > 0) {
             this.logger.warn(`Missing S3 tools: ${missingS3Tools.join(', ')}`);
@@ -186,12 +221,39 @@ export class McpClientService implements OnModuleInit, OnModuleDestroy {
     getToolByName(name: string) {
         // Try with exact name first
         let tool = this.tools.find(tool => tool.name === name);
-        // If not found, try with mcp prefixes
+
+        // If not found, try with mcp prefixes or more flexible matching
         if (!tool) {
+            // Check for prefixed versions (e.g., mcp__s3__list_buckets)
             tool = this.tools.find(tool =>
                 tool.name === `mcp__s3__${name}` ||
                 tool.name === `mcp__postgres__${name}`);
+
+            // If still not found, try more flexible matching
+            if (!tool && name) {
+                // For common tool names, try partial matching
+                const normalizedName = name.toLowerCase();
+
+                if (normalizedName.includes('bucket')) {
+                    tool = this.tools.find(t =>
+                        t.name.toLowerCase().includes('bucket') ||
+                        t.name.toLowerCase().includes('list'));
+                } else if (normalizedName.includes('query')) {
+                    tool = this.tools.find(t =>
+                        t.name.toLowerCase().includes('query') ||
+                        t.name.toLowerCase().includes('sql'));
+                } else if (normalizedName.includes('object')) {
+                    tool = this.tools.find(t =>
+                        t.name.toLowerCase().includes('object') ||
+                        t.name.toLowerCase().includes('content'));
+                }
+
+                if (tool) {
+                    this.logger.log(`Found tool "${tool.name}" using flexible matching for "${name}"`);
+                }
+            }
         }
+
         return tool;
     }
 

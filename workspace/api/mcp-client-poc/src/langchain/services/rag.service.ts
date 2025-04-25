@@ -108,15 +108,15 @@ export class RagService {
     }
 
     /**
-     * Search S3 for relevant documents
-     */
+ * Search S3 for relevant documents
+ */
     private async searchS3(query: string): Promise<RagResult[]> {
         const results: RagResult[] = [];
         const tools = await this.mcpClientService.getTools();
 
-        // Get a list of buckets
-        const listBucketsTool = tools.find(tool =>
-            tool.name === 'list_buckets' || tool.name === 'mcp__s3__list_buckets');
+        // Get a list of buckets with improved tool finding
+        const listBucketsTool = this.mcpClientService.getToolByName('list_buckets');
+
         if (!listBucketsTool) {
             this.logger.warn('S3 list_buckets tool not available');
             throw new Error('S3 list_buckets tool not available');
@@ -125,141 +125,246 @@ export class RagService {
         const bucketsResponse = await listBucketsTool.invoke({});
         this.logger.debug(`Buckets response: ${JSON.stringify(bucketsResponse)}`);
 
-        // Check if buckets is an array and has items
-        if (!bucketsResponse || !bucketsResponse.buckets || !Array.isArray(bucketsResponse.buckets)) {
-            this.logger.warn('No valid buckets found in response');
-            return results;
+        // Handle different response formats properly
+        let buckets: any[] = [];
+
+        try {
+            if (bucketsResponse) {
+                // Case 1: Response is already a proper object with buckets array
+                if (typeof bucketsResponse === 'object' &&
+                    bucketsResponse.buckets &&
+                    Array.isArray(bucketsResponse.buckets)) {
+                    buckets = bucketsResponse.buckets;
+                    this.logger.log(`Found ${buckets.length} S3 buckets from object structure`);
+                }
+                // Case 2: Response is a string that needs parsing
+                else if (typeof bucketsResponse === 'string') {
+                    try {
+                        const parsed = JSON.parse(bucketsResponse);
+                        if (parsed.buckets && Array.isArray(parsed.buckets)) {
+                            buckets = parsed.buckets;
+                            this.logger.log(`Found ${buckets.length} S3 buckets from JSON string`);
+                        }
+                    } catch (e) {
+                        this.logger.warn(`Failed to parse buckets string response: ${e.message}`);
+                    }
+                }
+                // Case 3: Direct array response
+                else if (Array.isArray(bucketsResponse)) {
+                    buckets = bucketsResponse;
+                    this.logger.log(`Found ${buckets.length} S3 buckets from direct array`);
+                }
+                // Fallback: Try to extract any bucket information from the response
+                else {
+                    this.logger.warn(`Unexpected buckets response format: ${typeof bucketsResponse}`);
+                    // Try to identify any bucket-like objects in the response
+                    if (typeof bucketsResponse === 'object') {
+                        for (const key in bucketsResponse) {
+                            if (Array.isArray(bucketsResponse[key])) {
+                                const possibleBuckets = bucketsResponse[key];
+                                if (possibleBuckets.length > 0 &&
+                                    possibleBuckets[0].name &&
+                                    typeof possibleBuckets[0].name === 'string') {
+                                    buckets = possibleBuckets;
+                                    this.logger.log(`Found ${buckets.length} S3 buckets from nested property ${key}`);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (error) {
+            this.logger.warn(`Error processing buckets response: ${error.message}`);
         }
 
-        const buckets = bucketsResponse.buckets || [];
-
-        if (buckets.length === 0) {
-            this.logger.warn('No S3 buckets found');
+        // Log the actual bucket data for debugging
+        if (buckets.length > 0) {
+            this.logger.debug(`First bucket: ${JSON.stringify(buckets[0])}`);
+        } else {
+            this.logger.warn('No valid S3 buckets identified');
             return results;
         }
 
         this.logger.log(`Found ${buckets.length} S3 buckets to search`);
 
-        // For each bucket, search for objects related to the query
-        const searchObjectsTool = tools.find(tool => tool.name === 'search_objects');
+        // For each bucket, search for objects related to the query with improved tool finding
+        const searchObjectsTool = this.mcpClientService.getToolByName('search_objects');
         if (!searchObjectsTool) {
             this.logger.warn('S3 search_objects tool not available');
             throw new Error('S3 search_objects tool not available');
         }
 
+        // Get content tool with improved finding
+        const getObjectContentTool = this.mcpClientService.getToolByName('get_object_content');
+        if (!getObjectContentTool) {
+            this.logger.warn('S3 get_object_content tool not available');
+            throw new Error('S3 get_object_content tool not available');
+        }
+
+        // Process each bucket sequentially to avoid overwhelming services
         for (const bucket of buckets) {
             try {
-                this.logger.log(`Searching bucket: ${bucket.name}`);
+                const bucketName = bucket.name || bucket.Name || bucket.bucket_name || bucket;
+                if (!bucketName || typeof bucketName !== 'string') {
+                    this.logger.warn(`Invalid bucket name: ${JSON.stringify(bucket)}`);
+                    continue;
+                }
 
-                const searchResponse = await searchObjectsTool.invoke({
-                    bucket: bucket.name,
-                    query: query,
-                    max_results: 5  // Increased from 3 to 5
-                });
+                this.logger.log(`Searching bucket: ${bucketName}`);
 
-                this.logger.debug(`Search response for bucket ${bucket.name}: ${JSON.stringify(searchResponse)}`);
+                try {
+                    const searchResponse = await searchObjectsTool.invoke({
+                        bucket: bucketName,
+                        query: query,
+                        max_results: 5  // Limit results 
+                    });
 
-                if (searchResponse.objects && Array.isArray(searchResponse.objects) && searchResponse.objects.length > 0) {
-                    this.logger.log(`Found ${searchResponse.objects.length} matching objects in bucket ${bucket.name}`);
+                    // Process search response
+                    let objects: any[] = [];
 
-                    // Get content of relevant objects
-                    const getObjectContentTool = tools.find(tool => tool.name === 'get_object_content');
-                    if (!getObjectContentTool) {
-                        this.logger.warn('S3 get_object_content tool not available');
-                        throw new Error('S3 get_object_content tool not available');
-                    }
-
-                    for (const obj of searchResponse.objects) {
-                        try {
-                            this.logger.log(`Retrieving content for object: ${obj.key}`);
-
-                            const contentResponse = await getObjectContentTool.invoke({
-                                bucket: bucket.name,
-                                key: obj.key,
-                                // Increased max size
-                                max_size: 2 * 1024 * 1024  // 2MB
-                            });
-
-                            // Enhanced metadata with more details
-                            const enhancedMetadata = {
-                                size: obj.size,
-                                lastModified: obj.last_modified,
-                                contentType: contentResponse.content_type,
-                                storageClass: obj.storage_class || 'STANDARD',
-                                bucket: bucket.name,
-                                key: obj.key,
-                                // Add a fully qualified path for easy reference
-                                path: `s3://${bucket.name}/${obj.key}`,
-                                // Add content preview for reference
-                                contentPreview: contentResponse.content.substring(0, 150) + (contentResponse.content.length > 150 ? '...' : '')
-                            };
-
-                            results.push({
-                                content: contentResponse.content,
-                                source: `s3://${bucket.name}/${obj.key}`,
-                                metadata: enhancedMetadata
-                            });
-
-                            this.logger.log(`Successfully retrieved content for object: ${obj.key}`);
-                        } catch (error) {
-                            this.logger.warn(`Error getting content for ${obj.key}: ${error.message}`);
+                    if (searchResponse) {
+                        if (typeof searchResponse === 'object' &&
+                            searchResponse.objects &&
+                            Array.isArray(searchResponse.objects)) {
+                            objects = searchResponse.objects;
+                        } else if (Array.isArray(searchResponse)) {
+                            objects = searchResponse;
                         }
                     }
-                } else {
-                    this.logger.log(`No matching objects found in bucket ${bucket.name}`);
+
+                    this.logger.log(`Found ${objects.length} matching objects in bucket ${bucketName}`);
+
+                    // Get content for each matching object
+                    for (const obj of objects) {
+                        try {
+                            // Get the key from object
+                            const objKey = obj.key || obj.Key || obj.object_key;
+                            if (!objKey || typeof objKey !== 'string') {
+                                this.logger.warn(`Invalid object key: ${JSON.stringify(obj)}`);
+                                continue;
+                            }
+
+                            this.logger.log(`Retrieving content for object: ${objKey}`);
+
+                            const contentResponse = await getObjectContentTool.invoke({
+                                bucket: bucketName,
+                                key: objKey,
+                                max_size: 2 * 1024 * 1024  // 2MB limit
+                            });
+
+                            // Process content response
+                            let content = '';
+                            let contentType = '';
+
+                            if (contentResponse) {
+                                if (typeof contentResponse === 'object') {
+                                    content = contentResponse.content || '';
+                                    contentType = contentResponse.content_type || '';
+                                } else if (typeof contentResponse === 'string') {
+                                    content = contentResponse;
+                                }
+                            }
+
+                            if (!content) {
+                                this.logger.warn(`No content retrieved for ${objKey}`);
+                                continue;
+                            }
+
+                            // Create enhanced metadata
+                            const metadata = {
+                                size: obj.size || 0,
+                                lastModified: obj.last_modified || obj.lastModified || new Date().toISOString(),
+                                contentType: contentType || 'text/plain',
+                                storageClass: obj.storage_class || obj.storageClass || 'STANDARD',
+                                bucket: bucketName,
+                                key: objKey,
+                                path: `s3://${bucketName}/${objKey}`,
+                                contentPreview: content.substring(0, 150) + (content.length > 150 ? '...' : '')
+                            };
+
+                            // Add to results
+                            results.push({
+                                content,
+                                source: `s3://${bucketName}/${objKey}`,
+                                metadata
+                            });
+
+                            this.logger.log(`Successfully retrieved content for object: ${objKey}`);
+                        } catch (error) {
+                            this.logger.warn(`Error getting content for object: ${error.message}`);
+                        }
+                    }
+                } catch (error) {
+                    this.logger.warn(`Error searching bucket ${bucketName}: ${error.message}`);
                 }
             } catch (error) {
-                this.logger.warn(`Error searching bucket ${bucket.name}: ${error.message}`);
+                this.logger.warn(`Error processing bucket: ${error.message}`);
             }
         }
 
+        this.logger.log(`Completed S3 search, found ${results.length} relevant documents`);
         return results;
     }
 
     /**
-     * Search Postgres for relevant information using vector search
-     */
+ * Search Postgres for relevant information using vector search or text fallback
+ */
     private async searchPostgres(query: string): Promise<RagResult[]> {
         const results: RagResult[] = [];
-        const tools = await this.mcpClientService.getTools();
-
-        const queryTool = tools.find(tool => tool.name === 'query');
-        if (!queryTool) {
-            this.logger.warn('Postgres query tool not available');
-            throw new Error('Postgres query tool not available');
-        }
 
         try {
-            // Check if vector extension is available
-            const checkVectorSql = `
-            SELECT COUNT(*) 
+            // Get tools with improved tool finding
+            const tools = await this.mcpClientService.getTools();
+
+            // Debug available tools
+            this.logger.debug(`Available tool names: ${tools.map(t => t.name).join(', ')}`);
+
+            const queryTool = this.mcpClientService.getToolByName('query');
+
+            if (!queryTool) {
+                this.logger.warn('Postgres query tool not available');
+                this.logger.debug(`Available tools: ${tools.map(t => t.name).join(', ')}`);
+                throw new Error('Postgres query tool not available');
+            }
+
+            this.logger.log(`Found Postgres query tool: ${queryTool.name}`);
+
+            try {
+                // Check if vector extension is available
+                const checkVectorSql = `
+            SELECT COUNT(*) as count
             FROM pg_extension 
             WHERE extname = 'vector';
             `;
 
-            const vectorEnabled = await queryTool.invoke({ sql: checkVectorSql });
-            this.logger.debug(`Vector extension check result: ${vectorEnabled}`);
+                const vectorEnabledResponse = await queryTool.invoke({ sql: checkVectorSql });
+                this.logger.debug(`Vector extension check result: ${vectorEnabledResponse}`);
 
-            // More robust check for vector extension
-            const hasVector = vectorEnabled &&
-                !vectorEnabled.includes('No results found') &&
-                !vectorEnabled.includes('Error') &&
-                !vectorEnabled.includes('0');
+                // More robust check for vector extension
+                let hasVector = false;
 
-            if (hasVector) {
-                this.logger.log('Vector extension is available, performing vector search');
+                if (vectorEnabledResponse) {
+                    hasVector = !vectorEnabledResponse.includes('No results found') &&
+                        !vectorEnabledResponse.includes('Error') &&
+                        vectorEnabledResponse.includes('count') &&
+                        !vectorEnabledResponse.includes('count: 0');
+                }
 
-                try {
-                    // Generate embedding for query
-                    const queryEmbedding = await this.vectorSearchService.generateEmbedding(query);
-                    if (!queryEmbedding || queryEmbedding.length === 0) {
-                        throw new Error('Failed to generate embedding for query');
-                    }
+                if (hasVector) {
+                    this.logger.log('Vector extension is available, performing vector search');
 
-                    const embeddingString = this.vectorSearchService.formatEmbeddingForPostgres(queryEmbedding);
+                    try {
+                        // Generate embedding for query
+                        const queryEmbedding = await this.vectorSearchService.generateEmbedding(query);
+                        if (!queryEmbedding || queryEmbedding.length === 0) {
+                            throw new Error('Failed to generate embedding for query');
+                        }
 
-                    // Use vector search with embedding similarity
-                    const vectorSearchSql = `
+                        const embeddingString = this.vectorSearchService.formatEmbeddingForPostgres(queryEmbedding);
+
+                        // More robust SQL query for vector search
+                        const vectorSearchSql = `
                     SELECT 
                       ticket_id, 
                       subject, 
@@ -269,48 +374,63 @@ export class RagService {
                       resolution,
                       1 - (embedding <=> '${embeddingString}'::vector) AS similarity
                     FROM support_tickets
-                    WHERE 1 - (embedding <=> '${embeddingString}'::vector) > 0.5
+                    WHERE embedding IS NOT NULL
                     ORDER BY embedding <=> '${embeddingString}'::vector
                     LIMIT 5;
                     `;
 
-                    this.logger.log('Executing vector similarity search...');
-                    this.logger.debug(`Vector search SQL: ${vectorSearchSql}`);
+                        this.logger.log('Executing vector similarity search...');
 
-                    const vectorResults = await queryTool.invoke({ sql: vectorSearchSql });
-                    this.logger.debug(`Vector search results: ${vectorResults}`);
+                        const vectorResults = await queryTool.invoke({ sql: vectorSearchSql });
+                        this.logger.debug(`Vector search results: ${vectorResults}`);
 
-                    if (vectorResults && !vectorResults.includes('Error')) {
-                        this.logger.log('Vector search successful');
-                        const parsed = this.parsePostgresResults(vectorResults);
-                        results.push(...parsed);
+                        if (vectorResults && !vectorResults.includes('Error')) {
+                            this.logger.log('Vector search successful');
+                            const parsed = this.parsePostgresResults(vectorResults);
+                            results.push(...parsed);
 
-                        if (parsed.length > 0) {
-                            this.logger.log(`Found ${parsed.length} results via vector search`);
-                            return results;
+                            if (parsed.length > 0) {
+                                this.logger.log(`Found ${parsed.length} results via vector search`);
+                                return results;
+                            }
+                        } else {
+                            this.logger.warn(`Vector search returned an error or no results: ${vectorResults}`);
                         }
-                    } else {
-                        this.logger.warn(`Vector search returned an error or no results: ${vectorResults}`);
+                    } catch (error) {
+                        this.logger.warn(`Error in vector search execution: ${error.message}`);
                     }
-                } catch (error) {
-                    this.logger.warn(`Error in vector search execution: ${error.message}`);
+                } else {
+                    this.logger.warn('Vector extension is not enabled in PostgreSQL, falling back to text search');
                 }
-            } else {
-                this.logger.warn('Vector extension is not enabled in PostgreSQL, falling back to text search');
+            } catch (error) {
+                this.logger.warn(`Error checking vector extension: ${error.message}`);
             }
-        } catch (error) {
-            this.logger.warn(`Error checking vector extension: ${error.message}`);
-        }
 
-        // Fallback to text search if vector search failed or is not available
-        try {
-            this.logger.log('Performing text search in Postgres');
+            // Fallback to text search if vector search failed or is not available
+            try {
+                this.logger.log('Performing text search in Postgres');
 
-            // Improved text search with better escaping and multiple search patterns
-            const cleanQuery = query.replace(/'/g, "''");
-            const keywords = cleanQuery.split(/\s+/).filter(k => k.length > 3);
+                // Improved text search with better escaping and multiple search patterns
+                const cleanQuery = query.replace(/'/g, "''");
+                const keywords = cleanQuery.split(/\s+/).filter(k => k.length > 3);
 
-            let textSearchSql = `
+                // First check if the table exists
+                const checkTableSql = `
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_schema = 'public' 
+                AND table_name = 'support_tickets'
+            ) as exists;
+            `;
+
+                const tableExists = await queryTool.invoke({ sql: checkTableSql });
+                if (!tableExists || tableExists.includes('exists: f')) {
+                    this.logger.warn('support_tickets table does not exist');
+                    throw new Error('support_tickets table does not exist');
+                }
+
+                // Build a robust query with multiple search approaches
+                let textSearchSql = `
             SELECT 
               ticket_id, 
               subject, 
@@ -319,73 +439,92 @@ export class RagService {
               metadata, 
               resolution
             FROM support_tickets
-            WHERE 
-              subject ILIKE '%${cleanQuery}%' OR 
-              description ILIKE '%${cleanQuery}%'
-            `;
+            WHERE 1=0`;  // Start with false condition and add OR clauses
 
-            // Add keyword-based search clauses
-            if (keywords.length > 0) {
-                textSearchSql += ' OR ' + keywords.map(k => `subject ILIKE '%${k}%' OR description ILIKE '%${k}%'`).join(' OR ');
-            }
+                // Add direct match on ticket ID if query looks like a ticket ID
+                if (/XYZ-\d+/i.test(query)) {
+                    const ticketIdMatch = query.match(/XYZ-\d+/i);
+                    if (ticketIdMatch) {
+                        textSearchSql += ` OR ticket_id ILIKE '%${ticketIdMatch[0]}%'`;
+                    }
+                }
 
-            textSearchSql += ' LIMIT 5;';
+                // Add subject/description search
+                textSearchSql += ` OR subject ILIKE '%${cleanQuery}%' OR description ILIKE '%${cleanQuery}%'`;
 
-            this.logger.debug(`Text search SQL: ${textSearchSql}`);
-            const queryResponse = await queryTool.invoke({ sql: textSearchSql });
-            this.logger.debug(`Text search results: ${queryResponse}`);
-
-            // Parse the results
-            if (queryResponse && queryResponse.includes('Results:')) {
-                const parsed = this.parsePostgresResults(queryResponse);
-                parsed.forEach(result => {
-                    // Mark these as text search results in metadata
-                    result.metadata.searchMethod = 'text_search';
-                });
-                results.push(...parsed);
-                this.logger.log(`Found ${parsed.length} results via text search`);
-            } else {
-                this.logger.log('No results found from text search');
-            }
-        } catch (error) {
-            this.logger.warn(`Error executing text search query: ${error.message}`);
-        }
-
-        // If no results yet, try getting ticket schema and some sample data
-        if (results.length === 0) {
-            try {
-                this.logger.log('No search results found, fetching schema information as fallback');
-
-                const describeTableTool = tools.find(tool => tool.name === 'describe_table');
-                if (describeTableTool) {
-                    const tableStructure = await describeTableTool.invoke({
-                        table_name: 'support_tickets',
-                        db_schema: 'public'
+                // Add keyword-based search clauses
+                if (keywords.length > 0) {
+                    keywords.forEach(keyword => {
+                        textSearchSql += ` OR subject ILIKE '%${keyword}%' OR description ILIKE '%${keyword}%'`;
                     });
+                }
 
-                    // Also get a sample ticket to provide context
-                    const sampleTicketSql = `
+                // Add JSON field search if the table might have JSONB columns
+                textSearchSql += `
+            OR customer::text ILIKE '%${cleanQuery}%' 
+            OR metadata::text ILIKE '%${cleanQuery}%'
+            OR resolution::text ILIKE '%${cleanQuery}%'`;
+
+                textSearchSql += ` LIMIT 5;`;
+
+                this.logger.debug(`Text search SQL: ${textSearchSql}`);
+                const queryResponse = await queryTool.invoke({ sql: textSearchSql });
+                this.logger.debug(`Text search results: ${queryResponse}`);
+
+                // Parse the results
+                if (queryResponse && queryResponse.includes('Results:')) {
+                    const parsed = this.parsePostgresResults(queryResponse);
+                    parsed.forEach(result => {
+                        // Mark these as text search results in metadata
+                        result.metadata.searchMethod = 'text_search';
+                    });
+                    results.push(...parsed);
+                    this.logger.log(`Found ${parsed.length} results via text search`);
+                } else {
+                    this.logger.log('No results found from text search');
+                }
+            } catch (error) {
+                this.logger.warn(`Error executing text search query: ${error.message}`);
+            }
+
+            // If no results yet, try getting ticket schema and some sample data
+            if (results.length === 0) {
+                try {
+                    this.logger.log('No search results found, fetching schema information as fallback');
+
+                    const describeTableTool = this.mcpClientService.getToolByName('describe_table');
+                    if (describeTableTool) {
+                        const tableStructure = await describeTableTool.invoke({
+                            table_name: 'support_tickets',
+                            db_schema: 'public'
+                        });
+
+                        // Also get a sample ticket to provide context
+                        const sampleTicketSql = `
                     SELECT ticket_id, subject FROM support_tickets LIMIT 1;
                     `;
 
-                    const sampleTicket = await queryTool.invoke({ sql: sampleTicketSql });
+                        const sampleTicket = await queryTool.invoke({ sql: sampleTicketSql });
 
-                    results.push({
-                        content: `No exact matches found, but here's the support_tickets table structure:\n${tableStructure}\n\nSample ticket data:\n${sampleTicket}`,
-                        source: 'postgres:schema:support_tickets',
-                        metadata: {
-                            type: 'schema',
-                            table: 'support_tickets',
-                            schema: 'public',
-                            searchMethod: 'fallback'
-                        }
-                    });
+                        results.push({
+                            content: `No exact matches found, but here's the support_tickets table structure:\n${tableStructure}\n\nSample ticket data:\n${sampleTicket}`,
+                            source: 'postgres:schema:support_tickets',
+                            metadata: {
+                                type: 'schema',
+                                table: 'support_tickets',
+                                schema: 'public',
+                                searchMethod: 'fallback'
+                            }
+                        });
 
-                    this.logger.log('Added table schema as fallback result');
+                        this.logger.log('Added table schema as fallback result');
+                    }
+                } catch (error) {
+                    this.logger.warn(`Error getting table schema: ${error.message}`);
                 }
-            } catch (error) {
-                this.logger.warn(`Error getting table schema: ${error.message}`);
             }
+        } catch (error) {
+            this.logger.error(`Error in searchPostgres: ${error.message}`);
         }
 
         return results;
