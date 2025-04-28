@@ -772,7 +772,6 @@ export class RagService {
 
 Use these retrieved documents to help answer the user's question completely and accurately.
 `;
-
         return context;
     }
 }
