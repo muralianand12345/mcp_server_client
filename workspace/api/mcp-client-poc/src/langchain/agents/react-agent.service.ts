@@ -105,6 +105,8 @@ When working with S3 images, you MUST first get the image content using the appr
                     // Format RAG context for the prompt
                     const ragContext = this.ragService.formatRagContext(ragResults.combinedResults);
 
+                    this.logger.log(ragContext);
+
                     // Add system message with RAG context
                     if (ragContext) {
                         // Build a comprehensive system prompt with RAG context
@@ -139,8 +141,7 @@ When working with S3 images, you MUST first get the image content using the appr
 Your goal is to help the user by searching and retrieving information from these sources.
 
 Available tools:
-- S3 tools: list_buckets, search_objects, get_object_content
-- Postgres tools: query, list_schemas, describe_table
+- PostgreSQL and S3 tools
 
 Please use these tools to help answer the user's questions by searching the available data sources.`;
 

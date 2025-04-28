@@ -16,9 +16,21 @@ export interface RagQueryResults {
     postgresResults: RagResult[];
 }
 
+export interface ImageInfo {
+    s3_key: string;
+    description: string;
+    uploaded_at: string;
+    presigned_url?: string;
+    exists: boolean;
+    bucket: string;
+    content?: string;
+    contentType?: string;
+}
+
 @Injectable()
 export class RagService {
     private readonly logger = new Logger(RagService.name);
+    private readonly defaultBucketName = 'xyz-support-images'; // Default bucket for images
 
     constructor(
         private configService: ConfigService,
@@ -108,8 +120,145 @@ export class RagService {
     }
 
     /**
- * Search S3 for relevant documents
- */
+     * Fetch image content from S3 based on image information
+     * @param imageInfo Image information object with s3_key
+     * @returns Enhanced imageInfo object with content
+     */
+    async fetchImageContent(imageInfo: Partial<ImageInfo>): Promise<ImageInfo | null> {
+        try {
+            if (!imageInfo.s3_key) {
+                this.logger.warn('Cannot fetch image: No S3 key provided');
+                return null;
+            }
+
+            const bucketName = imageInfo.bucket || this.defaultBucketName;
+
+            this.logger.log(`Fetching image content for ${imageInfo.s3_key} from bucket ${bucketName}`);
+
+            // Get the S3 tool
+            const getObjectContentTool = this.mcpClientService.getToolByName('get_object_content');
+            if (!getObjectContentTool) {
+                this.logger.warn('S3 get_object_content tool not available');
+                return null;
+            }
+
+            // Invoke the tool to get the image content
+            const contentResponse = await getObjectContentTool.invoke({
+                bucket: bucketName,
+                key: imageInfo.s3_key,
+                max_size: 5 * 1024 * 1024  // 5MB limit for images
+            });
+
+            // Process content response
+            let content = '';
+            let contentType = '';
+
+            if (contentResponse) {
+                if (typeof contentResponse === 'object') {
+                    content = contentResponse.content || '';
+                    contentType = contentResponse.content_type || '';
+                } else if (typeof contentResponse === 'string') {
+                    content = contentResponse;
+                    // Try to guess content type
+                    if (imageInfo.s3_key.toLowerCase().endsWith('.png')) {
+                        contentType = 'image/png';
+                    } else if (imageInfo.s3_key.toLowerCase().endsWith('.jpg') ||
+                        imageInfo.s3_key.toLowerCase().endsWith('.jpeg')) {
+                        contentType = 'image/jpeg';
+                    } else {
+                        contentType = 'image/unknown';
+                    }
+                }
+            }
+
+            if (!content) {
+                this.logger.warn(`No content retrieved for ${imageInfo.s3_key}`);
+                return null;
+            }
+
+            // Create a complete ImageInfo object
+            return {
+                s3_key: imageInfo.s3_key,
+                description: imageInfo.description || 'No description',
+                uploaded_at: imageInfo.uploaded_at || new Date().toISOString(),
+                presigned_url: imageInfo.presigned_url,
+                exists: true,
+                bucket: bucketName,
+                content,
+                contentType
+            };
+        } catch (error) {
+            this.logger.error(`Error fetching image content: ${error.message}`);
+            return null;
+        }
+    }
+
+    /**
+     * Extract and fetch all images from a metadata object
+     * @param metadataString JSON string or object containing metadata with images
+     * @returns Array of ImageInfo objects
+     */
+    async extractAndFetchImagesFromMetadata(metadataString: string | Record<string, any>): Promise<ImageInfo[]> {
+        try {
+            // Parse metadata if it's a string
+            let metadata: Record<string, any>;
+            if (typeof metadataString === 'string') {
+                metadata = this.tryParseJson(metadataString);
+                if (!metadata) {
+                    this.logger.warn('Failed to parse metadata string');
+                    return [];
+                }
+            } else {
+                metadata = metadataString;
+            }
+
+            // Extract images array
+            const images = metadata.images;
+            if (!images || !Array.isArray(images) || images.length === 0) {
+                this.logger.log('No images found in metadata');
+                return [];
+            }
+
+            this.logger.log(`Found ${images.length} images in metadata`);
+
+            // Fetch content for each image that exists
+            const imageResults: ImageInfo[] = [];
+
+            for (const img of images) {
+                if (img.exists === false) {
+                    this.logger.log(`Skipping non-existent image: ${img.s3_key}`);
+                    continue;
+                }
+
+                if (!img.s3_key) {
+                    this.logger.warn('Skipping image with no S3 key');
+                    continue;
+                }
+
+                // Set the bucket if not already in the image info
+                const imageInfo: Partial<ImageInfo> = {
+                    ...img,
+                    bucket: img.bucket || this.defaultBucketName
+                };
+
+                const fetchedImage = await this.fetchImageContent(imageInfo);
+                if (fetchedImage) {
+                    imageResults.push(fetchedImage);
+                }
+            }
+
+            this.logger.log(`Successfully fetched ${imageResults.length} out of ${images.length} images`);
+            return imageResults;
+
+        } catch (error) {
+            this.logger.error(`Error extracting and fetching images: ${error.message}`);
+            return [];
+        }
+    }
+
+    /**
+     * Search S3 for relevant documents
+     */
     private async searchS3(query: string): Promise<RagResult[]> {
         const results: RagResult[] = [];
         const tools = await this.mcpClientService.getTools();
@@ -280,7 +429,8 @@ export class RagService {
                                 bucket: bucketName,
                                 key: objKey,
                                 path: `s3://${bucketName}/${objKey}`,
-                                contentPreview: content.substring(0, 150) + (content.length > 150 ? '...' : '')
+                                contentPreview: content.substring(0, 150) + (content.length > 150 ? '...' : ''),
+                                isImage: this.isImageContentType(contentType) || this.hasImageExtension(objKey)
                             };
 
                             // Add to results
@@ -308,8 +458,25 @@ export class RagService {
     }
 
     /**
- * Search Postgres for relevant information using vector search or text fallback
- */
+     * Check if a content type refers to an image
+     */
+    private isImageContentType(contentType: string): boolean {
+        if (!contentType) return false;
+        return contentType.toLowerCase().startsWith('image/');
+    }
+
+    /**
+     * Check if a file path has an image extension
+     */
+    private hasImageExtension(path: string): boolean {
+        if (!path) return false;
+        const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg'];
+        return imageExtensions.some(ext => path.toLowerCase().endsWith(ext));
+    }
+
+    /**
+     * Search Postgres for relevant information using vector search or text fallback
+     */
     private async searchPostgres(query: string): Promise<RagResult[]> {
         const results: RagResult[] = [];
 
@@ -387,6 +554,24 @@ export class RagService {
                         if (vectorResults && !vectorResults.includes('Error')) {
                             this.logger.log('Vector search successful');
                             const parsed = this.parsePostgresResults(vectorResults);
+
+                            // Enhance results with image content if available
+                            for (const result of parsed) {
+                                if (result.metadata.images && Array.isArray(result.metadata.images)) {
+                                    this.logger.log(`Found ${result.metadata.images.length} images in result ${result.metadata.ticketId}, enhancing metadata`);
+
+                                    // Add bucket information to each image for easier retrieval
+                                    result.metadata.images = result.metadata.images.map(img => ({
+                                        ...img,
+                                        bucket: this.defaultBucketName
+                                    }));
+
+                                    // Mark that images are available for retrieval
+                                    result.metadata.hasImages = true;
+                                    result.metadata.imageCount = result.metadata.images.length;
+                                }
+                            }
+
                             results.push(...parsed);
 
                             if (parsed.length > 0) {
@@ -477,6 +662,17 @@ export class RagService {
                     parsed.forEach(result => {
                         // Mark these as text search results in metadata
                         result.metadata.searchMethod = 'text_search';
+
+                        // Enhance image metadata for easier retrieval
+                        if (result.metadata.images && Array.isArray(result.metadata.images)) {
+                            result.metadata.images = result.metadata.images.map(img => ({
+                                ...img,
+                                bucket: this.defaultBucketName
+                            }));
+
+                            result.metadata.hasImages = true;
+                            result.metadata.imageCount = result.metadata.images.length;
+                        }
                     });
                     results.push(...parsed);
                     this.logger.log(`Found ${parsed.length} results via text search`);
@@ -678,6 +874,9 @@ export class RagService {
                                     content += `    Path: ${img.s3_key}\n`;
                                     // This helps the agent know it can retrieve this image from S3
                                     content += `    Storage: Available in S3 bucket\n`;
+                                    if (img.presigned_url) {
+                                        content += `    Presigned URL available\n`;
+                                    }
                                 }
                             });
                         }
@@ -772,7 +971,6 @@ export class RagService {
 
 Use these retrieved documents to help answer the user's question completely and accurately.
 `;
-
         return context;
     }
 }
