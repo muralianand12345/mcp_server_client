@@ -18,3 +18,4 @@ data
 **uv.lock
 **dist
 localstack
+workspace/api/mcp-client-poc/chat-logs/

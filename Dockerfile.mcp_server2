@@ -13,7 +13,7 @@ COPY pyproject.toml ./
 COPY workspace/servers/mcp_server_2.py ./workspace/servers/
 
 # Install Python dependencies including psycopg2-binary
-RUN pip install --no-cache-dir fastmcp mcp[cli] python-dotenv psycopg2-binary
+RUN pip install --no-cache-dir fastmcp>=0.4.1 mcp[cli]>=1.6.0 python-dotenv>=1.1.0 psycopg2>=2.9.10
 
 EXPOSE 8002
 
