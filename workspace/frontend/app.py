@@ -17,8 +17,6 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 if "session_id" not in st.session_state:
     st.session_state.session_id = str(uuid.uuid4())
-if "show_details" not in st.session_state:
-    st.session_state.show_details = False
 
 
 # Helper functions
@@ -54,10 +52,6 @@ def get_rag_details(query):
         return None
 
 
-def toggle_details():
-    st.session_state.show_details = not st.session_state.show_details
-
-
 # UI Layout
 st.title("AI Chat Assistant")
 
@@ -75,49 +69,10 @@ with col1:
             pass
         st.rerun()
 
-with col2:
-    if st.button("Toggle RAG Details", help="Show or hide retrieval information"):
-        toggle_details()
-
 # Chat messages display
 for i, message in enumerate(st.session_state.messages):
     with st.chat_message(message["role"]):
         st.write(message["content"])
-
-        # Show RAG details for user messages when enabled
-        if st.session_state.show_details and message["role"] == "user":
-            # Only show for messages with a response
-            if (
-                i + 1 < len(st.session_state.messages)
-                and st.session_state.messages[i + 1]["role"] == "assistant"
-            ):
-                # Fetch RAG details when details are toggled on
-                rag_details = get_rag_details(message["content"])
-
-                if rag_details and rag_details.get("totalResults", 0) > 0:
-                    # Use a container instead of an expander to avoid nesting issues
-                    with st.container():
-                        st.markdown("#### RAG Sources")
-                        st.caption(
-                            f"Found {rag_details['totalResults']} relevant sources"
-                        )
-                        st.caption(
-                            f"S3: {rag_details['s3Results']} | Postgres: {rag_details['postgresResults']}"
-                        )
-
-                        # List sources without nesting expanders
-                        if rag_details.get("formattedSources"):
-                            # Create a markdown table of sources
-                            st.markdown("| Source | Content Preview |")
-                            st.markdown("| ------ | -------------- |")
-                            for src in rag_details["formattedSources"]:
-                                preview = (
-                                    src["contentPreview"].replace("\n", " ")[:100]
-                                    + "..."
-                                )
-                                st.markdown(f"| `{src['source']}` | {preview} |")
-                elif rag_details:
-                    st.caption("No relevant sources found")
 
 # Chat input
 if prompt := st.chat_input("Type your message here..."):

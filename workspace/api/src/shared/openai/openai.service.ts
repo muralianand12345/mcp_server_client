@@ -10,17 +10,22 @@ export class OpenAIService {
 
     constructor(private configService: ConfigService) {
         const apiKey = this.configService.openaiApiKey;
+        const baseURL = this.configService.openaiBaseUrl;
+        const chatOpenAIModel = this.configService.chatOpenAIModel;
 
         // Initialize OpenAI client
         this.openai = new OpenAI({
             apiKey,
+            baseURL,
         });
 
         // Initialize LangChain ChatOpenAI
         this.langChainModel = new ChatOpenAI({
             openAIApiKey: apiKey,
-            modelName: 'gpt-4o',
-            temperature: 0.7,
+            modelName: chatOpenAIModel,
+            configuration: {
+                baseURL: baseURL,
+            }
         });
     }
 
@@ -34,8 +39,10 @@ export class OpenAIService {
 
     async generateEmbedding(text: string): Promise<number[]> {
         try {
+            const openaiEmbeddingModel = this.configService.openaiEmbeddingModel;
+
             const response = await this.openai.embeddings.create({
-                model: 'text-embedding-ada-002',
+                model: openaiEmbeddingModel,
                 input: text,
             });
 

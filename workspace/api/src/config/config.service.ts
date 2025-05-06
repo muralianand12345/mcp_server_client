@@ -9,21 +9,64 @@ export class ConfigService {
         return this.configService.get<string>('OPENAI_API_KEY') || "";
     }
 
+    get openaiBaseUrl(): string {
+        return "https://api.openai.com/v1";
+    }
+
+    get clientOpenAIModel(): string {
+        return "gpt-4o"; //Used in Agent (Powerful LLM with image support)
+    }
+
+    get chatOpenAIModel(): string {
+        return "gpt-4o"; //Used in Tool Agent (LLM with tool support)
+    }
+
+    get openaiEmbeddingModel(): string {
+        return "text-embedding-ada-002"; //same as the one used in the PGVector
+    }
+
     get s3BucketName(): string {
         return this.configService.get<string>('S3_BUCKET_NAME') || 'xyz-support-images';
     }
 
+    get topK(): number {
+        return 3;
+    }
+
     get databaseUrl(): string {
         return this.configService.get<string>('DATABASE_URL') ||
-            'postgresql://neondb_owner:npg_O32abLFEITNG@ep-bold-dawn-a1ru8bmh-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require';
+            'postgresql://postgres:postgres@localhost:5432/postgres';
     }
 
-    get mcpS3Url(): string {
-        return this.configService.get<string>('MCP_S3_URL') || 'http://localhost:8001/sse';
+    get mcpServers(): Record<string, { transport: 'sse', url: string, reconnect: { enabled: boolean, maxAttempts: number, delayMs: number } }> {
+        return {
+            s3: {
+                transport: 'sse' as const,
+                url: this.configService.get<string>('MCP_S3_URL') || 'http://localhost:8001/sse',
+                reconnect: {
+                    enabled: true,
+                    maxAttempts: 5,
+                    delayMs: 2000,
+                }
+            },
+            postgres: {
+                transport: 'sse' as const,
+                url: this.configService.get<string>('MCP_POSTGRES_URL') || 'http://localhost:8002/sse',
+                reconnect: {
+                    enabled: true,
+                    maxAttempts: 5,
+                    delayMs: 2000,
+                }
+            }
+        }
     }
 
-    get mcpPostgresUrl(): string {
-        return this.configService.get<string>('MCP_POSTGRES_URL') || 'http://localhost:8002/sse';
+    get toolS3BaseUrl(): string {
+        return "http://localhost:4566"
+    }
+
+    get chatHistoryLimit(): number {
+        return 10;
     }
 
     get port(): number {

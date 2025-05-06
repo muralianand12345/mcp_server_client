@@ -15,7 +15,7 @@ export class RagService {
         private configService: ConfigService,
     ) {
         this.bucketName = this.configService.s3BucketName;
-        this.topK = 3; // Default top_k value
+        this.topK = this.configService.topK;
     }
 
     async search(query: string): Promise<RagData> {

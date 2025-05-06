@@ -25,26 +25,7 @@ export class ToolAgentService {
         this.outputParser = StructuredOutputParser.fromZodSchema(outputSchema);
 
         // Initialize MCP client
-        this.mcpClient = new MultiServerMCPClient({
-            s3: {
-                transport: 'sse',
-                url: this.configService.mcpS3Url,
-                reconnect: {
-                    enabled: true,
-                    maxAttempts: 5,
-                    delayMs: 2000,
-                }
-            },
-            postgres: {
-                transport: 'sse',
-                url: this.configService.mcpPostgresUrl,
-                reconnect: {
-                    enabled: true,
-                    maxAttempts: 5,
-                    delayMs: 2000,
-                }
-            }
-        });
+        this.mcpClient = new MultiServerMCPClient(this.configService.mcpServers);
     }
 
     private buildSystemPrompt(ragContext: string): string {
@@ -61,11 +42,11 @@ export class ToolAgentService {
         ${formatInstructions}
 
         Important: For each image object returned from the S3 bucket, construct the full URL by combining:
-        - Base URL: http://localhost:4566
-        - Bucket name: xyz-support-images
+        - Base URL: ${this.configService.toolS3BaseUrl}
+        - Bucket name: ${this.configService.s3BucketName}
         - Image key (filename)
 
-        The final URL format should be: http://localhost:4566/xyz-support-images/[image-filename]
+        The final URL format should be: ${this.configService.toolS3BaseUrl}/${this.configService.s3BucketName}/[image-filename]
         `;
 
         if (ragContext && ragContext.length > 0) {

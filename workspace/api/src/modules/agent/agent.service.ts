@@ -1,12 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { OpenAIService } from '../../shared/openai/openai.service';
 import { Message } from '../../common/interfaces/message.interface';
+import { ConfigService } from '../../config/config.service';
 
 @Injectable()
 export class AgentService {
     private chatHistory: Map<string, Array<{ role: 'user' | 'assistant', content: string }>> = new Map();
 
-    constructor(private openaiService: OpenAIService) { }
+    constructor(
+        private openaiService: OpenAIService,
+        private configService: ConfigService
+    ) { }
 
     // Add a message to the chat history
     public addToHistory(sessionId: string, role: 'user' | 'assistant', content: string): void {
@@ -17,8 +21,8 @@ export class AgentService {
         const history = this.chatHistory.get(sessionId) || [];
         history.push({ role, content });
 
-        // Keep chat history at a reasonable size (last 10 messages)
-        if (history.length > 10) {
+        // Keep chat history at a reasonable size
+        if (history.length > this.configService.chatHistoryLimit) {
             history.shift();
         }
     }
@@ -35,21 +39,32 @@ export class AgentService {
 
     // Build the system prompt with all available context
     private buildSystemPrompt(ragContext: string, toolData: string | null): string {
-        let systemPrompt = `You are a helpful assistant.
-        Your goal is to answer the user's questions accurately using the available data.
-        If the user's question is not in Retrieval RAG, reply with "I don't have enough information to answer that question. Could you ask something else?" or similar phrases.
-        Answer in-detail and provide the most relevant information. If the RAG or Tool data has image urls, please add/attach the url link to your response.
-    `;
+        let systemPrompt = `
+        You are a helpful ticket assistant.
+        Your goad is to answer user's questions accurately using available information from RAG Knowledge Base and Tool Execution Data.
+
+        INSTRUCTIONS:
+        - Do not answer if the question's answer/information is not in the RAG Knowledge Base or Tool Execution Data.
+        - Do not make up information. Only use the information provided in the RAG Knowledge Base and Tool Execution Data. If the information is not available, say "I don't know" or similar phrases.
+        - If a image is provided, use it to answer the question. If the image has the answer to user's question, provide the answer using the image. Do not explain the whole image unless the user asks for it.
+        - Attach the image if it is relevant to the question. Example: [Relavant Image Name](image_url_here)
+        `
 
         if (ragContext && ragContext.length > 0) {
-            systemPrompt += `\n\n## Retrieved Data Knowledge:\n${ragContext}\n\nThe "metadata.resolution" field is the most important and has the answer to the user's question.`;
+            systemPrompt += `
+            \n###RAG Knowledge Base Context:
+            ${ragContext}
+            - Resolution is the answer to problem.
+            `
         }
 
         if (toolData && toolData.length > 0) {
-            systemPrompt += `\n\n## Tool Data:\n${toolData}`;
+            systemPrompt += `
+            \n###Tool Execution Data:
+            ${toolData}
+            `
         }
 
-        systemPrompt += `\n\n## Instructions:\nPlease answer the user's question based on the provided data. Do not make up information. If you don't know the answer, say "I don't know.". Only answer if the information is in the context.\nIf a image url is given, please add/attach the url link to your response.`;
         return systemPrompt;
     }
 
@@ -99,16 +114,40 @@ export class AgentService {
 
                     // Add image URLs to the messages if available
                     if (urls && urls.length > 0) {
-                        for (const url of urls) {
+                        const imageData = await Promise.all(
+                            urls.map(async (url: string) => {
+                                try {
+                                    const response = await fetch(url);
+                                    const buffer = await response.arrayBuffer();
+                                    const base64 = Buffer.from(buffer).toString('base64');
+
+                                    return {
+                                        url,
+                                        base64: `data:image/jpeg;base64,${base64}`,
+                                        alt: `Image from ${url.split('/').pop() || 'tool data'}`
+                                    };
+                                } catch (error) {
+                                    console.error(`Error fetching image from URL ${url}: ${error.message}`);
+                                    return { url, error: true };
+                                }
+                            })
+                        );
+
+                        const validImages = imageData.filter(img => !img.error);
+                        for (const img of validImages) {
                             messages.push({
                                 role: "user",
                                 content: [
                                     {
                                         type: "image_url",
                                         image_url: {
-                                            url,
+                                            url: img.base64,
                                             detail: "high"
                                         }
+                                    },
+                                    {
+                                        type: "text",
+                                        text: `Image from ${img.url}`
                                     }
                                 ]
                             });
@@ -121,9 +160,8 @@ export class AgentService {
             }
 
             const response = await this.openaiService.getClient().chat.completions.create({
-                model: "gpt-4o",
-                messages: messages as any,
-                temperature: 0.7
+                model: this.configService.clientOpenAIModel,
+                messages: messages as any
             });
 
             const reply = response.choices[0].message.content || "Sorry, I couldn't generate a response.";
