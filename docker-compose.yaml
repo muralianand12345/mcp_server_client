@@ -43,8 +43,8 @@ services:
     # MCP Server 1 (S3 Search Service)
     mcp_server1:
         build:
-            context: ./workspace/servers/
-            dockerfile: Dockerfile.mcp_server1
+            context: .
+            dockerfile: /workspace/servers/Dockerfile.mcp_server1
         container_name: mcp_server1
         ports:
             - "8001:8001"
@@ -63,8 +63,8 @@ services:
     # MCP Server 2 (Postgres Search Service)
     mcp_server2:
         build:
-            context: ./workspace/servers/
-            dockerfile: Dockerfile.mcp_server2
+            context: .
+            dockerfile: /workspace/servers/Dockerfile.mcp_server2
         container_name: mcp_server2
         ports:
             - "8002:8002"
