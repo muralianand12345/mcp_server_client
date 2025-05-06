@@ -118,7 +118,7 @@ services:
             dockerfile: Dockerfile
         container_name: mcp_streamlit
         ports:
-            - "8501:8501"
+            - "3001:3001"
         environment:
             - PYTHONUNBUFFERED=1
             - API_URL=http://api:3000

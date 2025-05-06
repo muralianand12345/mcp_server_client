@@ -11,7 +11,7 @@ RUN pip install --no-cache-dir streamlit python-dotenv requests
 # Copy the application
 COPY app.py ./
 
-EXPOSE 8501
+EXPOSE 3001
 
 # Run the Streamlit application
-CMD ["streamlit", "run", "app.py", "--server.address=0.0.0.0"]
+CMD ["streamlit", "run", "app.py", "--server.address=0.0.0.0", "--server.port=3001"]

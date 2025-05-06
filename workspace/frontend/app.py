@@ -2,7 +2,6 @@ import streamlit as st
 import requests
 import uuid
 import os
-from datetime import datetime
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -92,3 +91,4 @@ if prompt := st.chat_input("Type your message here..."):
 
 # Small footer with session info
 st.caption(f"Session ID: {st.session_state.session_id}")
+
