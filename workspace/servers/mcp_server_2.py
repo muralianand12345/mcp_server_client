@@ -17,7 +17,7 @@ mcp = FastMCP(
 
 
 def get_connection():
-    return psycopg2.connect(os.getenv("POSTGRES_URL"))
+    return psycopg2.connect("postgresql://neondb_owner:npg_O32abLFEITNG@ep-bold-dawn-a1ru8bmh-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require")
 
 
 @mcp.tool()
