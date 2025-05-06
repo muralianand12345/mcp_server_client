@@ -62,7 +62,7 @@ export class ConfigService {
     }
 
     get toolS3BaseUrl(): string {
-        return "http://localhost:4566"
+        return this.configService.get<string>('AWS_ENDPOINT_URL') || "http://localstack:4566";
     }
 
     get chatHistoryLimit(): number {
