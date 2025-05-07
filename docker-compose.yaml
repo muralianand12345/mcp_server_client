@@ -89,6 +89,29 @@ services:
         networks:
             - mcp-network
 
+    # MCP Server 3 (PGVector Search Service)
+    mcp_server3:
+        build:
+            context: .
+            dockerfile: ./workspace/servers/Dockerfile.mcp_server3
+        container_name: mcp_server3
+        ports:
+            - "8003:8003"
+        env_file:
+            - .env
+        environment:
+            - PYTHONUNBUFFERED=1
+            - POSTGRES_USER=${POSTGRES_USER}
+            - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+            - POSTGRES_DB=${POSTGRES_DB}
+            - POSTGRES_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable
+        depends_on:
+            postgres:
+                condition: service_healthy
+        command: python /app/workspace/servers/mcp_server_3.py
+        networks:
+            - mcp-network
+
     # NestJS API
     api:
         build:
@@ -109,6 +132,7 @@ services:
         depends_on:
             - mcp_server1
             - mcp_server2
+            - mcp_server3
         command: >
             sh -c "sleep 10 && npm run start"
         networks:
@@ -129,6 +153,7 @@ services:
             - api
             - mcp_server1
             - mcp_server2
+            - mcp_server3
         networks:
             - mcp-network
 
