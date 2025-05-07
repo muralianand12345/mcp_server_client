@@ -1,3 +1,4 @@
+import os
 import psycopg2
 from dotenv import load_dotenv
 from typing import Optional
@@ -16,7 +17,20 @@ mcp = FastMCP(
 
 
 def get_connection():
-    return psycopg2.connect("postgresql://neondb_owner:npg_O32abLFEITNG@ep-bold-dawn-a1ru8bmh-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require")
+    postgres_user = os.getenv("POSTGRES_USER")
+    postgres_password = os.getenv("POSTGRES_PASSWORD")
+    postgres_db = os.getenv("POSTGRES_DB")
+    postgres_host = "postgres"
+
+    print(f"Connecting to PostgreSQL with: {postgres_user}:{postgres_password}@{postgres_host}:5432/{postgres_db}")
+
+    return psycopg2.connect(
+        host=postgres_host,
+        port="5432",
+        dbname=postgres_db,
+        user=postgres_user,
+        password=postgres_password,
+    )
 
 
 @mcp.tool()

@@ -78,7 +78,10 @@ services:
             - .env
         environment:
             - PYTHONUNBUFFERED=1
-            - POSTGRES_URL=${POSTGRES_URL}
+            - POSTGRES_USER=${POSTGRES_USER}
+            - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+            - POSTGRES_DB=${POSTGRES_DB}
+            - POSTGRES_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable
         depends_on:
             postgres:
                 condition: service_healthy
