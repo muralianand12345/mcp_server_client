@@ -1,4 +1,5 @@
 ```mermaid
+%%{init: {'flowchart': {'curve': 'bezier'}}}%%
 flowchart TB
     subgraph Client
         User["User"]
