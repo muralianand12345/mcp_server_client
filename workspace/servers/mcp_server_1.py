@@ -215,7 +215,9 @@ class ResponseGetObjectContent(BaseModel):
 
 @mcp.tool()
 def get_object_content(
-    bucket: str, key: str, max_size: int = 1024 * 1024  # 1MB default max size
+    bucket: str,
+    key: str,
+    max_size: int = 1024 * 1024,  # 1MB default max size
 ) -> ResponseGetObjectContent:
     """
     Get the content of a text file from S3.
@@ -281,7 +283,7 @@ def get_object_content(
         )
     except UnicodeDecodeError:
         raise Exception(
-            f"Error decoding file content: The file appears to be a binary file, not a text file."
+            "Error decoding file content: The file appears to be a binary file, not a text file."
         )
     except Exception as e:
         raise Exception(

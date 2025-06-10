@@ -38,7 +38,7 @@ export class AgentService {
     }
 
     // Build the system prompt with all available context
-    private buildSystemPrompt(ragContext: string, toolData: string | null): string {
+    private buildSystemPrompt(ragContext: string, toolData: string | null, imageCitation: boolean = true): string {
         let systemPrompt = `
         You are a helpful ticket assistant.
         Your goad is to answer user's questions accurately using available information from RAG Knowledge Base and Tool Execution Data.
@@ -47,8 +47,24 @@ export class AgentService {
         - Do not answer if the question's answer/information is not in the RAG Knowledge Base or Tool Execution Data.
         - Do not make up information. Only use the information provided in the RAG Knowledge Base and Tool Execution Data. If the information is not available, say "I don't know" or similar phrases.
         - If a image is provided, use it to answer the question. If the image has the answer to user's question, provide the answer using the image. Do not explain the whole image unless the user asks for it.
-        - Attach the image if it is relevant to the question. Example: [Relavant Image Name](image_url_here)
         `
+
+        if (imageCitation && ragContext && ragContext.length > 0) {
+            console.log('Adding image citation instructions to system prompt');
+            systemPrompt += `
+            \n###Image Citation:
+            If the RAG Knowledge Base contains images, cite them in your response. Use the format: 
+            - <CIT image_url=IMG_URL>Your answer snippet here</CIT>
+
+            Where:
+            - IMG_URL is the URL of the image from the RAG Knowledge Base.
+            - Your answer snippet is the part of the answer that is derived from the image.
+            - The text inside <CIT> is part of your final answer, not the original content
+            - Keep citations minimal and only cite when directly referencing content
+
+            Remember: The text inside <CIT> is your answer's snippet, not the source content itself.
+            `
+        }
 
         if (ragContext && ragContext.length > 0) {
             systemPrompt += `

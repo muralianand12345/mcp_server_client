@@ -22,7 +22,9 @@ def get_connection():
     postgres_db = os.getenv("POSTGRES_DB")
     postgres_host = "postgres"
 
-    print(f"Connecting to PostgreSQL with: {postgres_user}:{postgres_password}@{postgres_host}:5432/{postgres_db}")
+    print(
+        f"Connecting to PostgreSQL with: {postgres_user}:{postgres_password}@{postgres_host}:5432/{postgres_db}"
+    )
 
     return psycopg2.connect(
         host=postgres_host,

@@ -35,7 +35,7 @@ export class RagService {
                 metadata,
                 resolution,
                 created_at
-                FROM public.support_tickets
+                FROM public.vector_table
                 ORDER BY embedding <=> $1::vector
                 LIMIT $2;
             `;

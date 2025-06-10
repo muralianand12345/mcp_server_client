@@ -9,11 +9,11 @@ RUN find /etc/apt/ -name '*.list' -exec sed -i 's|http://deb.debian.org/debian|h
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 COPY pyproject.toml ./
-COPY workspace/servers/mcp_server_2.py ./workspace/servers/
+COPY workspace/servers/mcp_server_3.py ./workspace/servers/
 
 # Install Python dependencies including psycopg2-binary
-RUN pip install --no-cache-dir fastmcp>=0.4.1 mcp[cli]>=1.6.0 python-dotenv>=1.1.0 psycopg2>=2.9.10
+RUN pip install --no-cache-dir fastmcp>=0.4.1 mcp[cli]>=1.6.0 python-dotenv>=1.1.0 psycopg2>=2.9.10 openai>=1.70.0
 
-EXPOSE 8002
+EXPOSE 8003
 
-CMD ["python", "/app/workspace/servers/mcp_server_2.py"]
+CMD ["python", "/app/workspace/servers/mcp_server_3.py"]
