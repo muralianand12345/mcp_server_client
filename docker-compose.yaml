@@ -1,4 +1,21 @@
 services:
+    # Nginx
+    nginx:
+        image: nginx:alpine
+        container_name: nginx
+        ports:
+            - "80:80"
+            - "443:8443"
+        restart: on-failure
+        volumes:
+            - ./config/nginx.local.conf:/etc/nginx/nginx.conf
+            - ./config/nginx-certs:/etc/nginx/certs
+        depends_on:
+            - api
+            - streamlit
+        networks:
+            - mcp-network
+
     # LocalStack for S3 emulation
     localstack:
         image: localstack/localstack:0.12.5
