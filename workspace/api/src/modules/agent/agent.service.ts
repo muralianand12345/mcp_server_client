@@ -155,15 +155,15 @@ export class AgentService {
                                 role: "user",
                                 content: [
                                     {
+                                        type: "text",
+                                        text: `Image from ${img.url}`
+                                    },
+                                    {
                                         type: "image_url",
                                         image_url: {
                                             url: img.base64,
                                             detail: "high"
                                         }
-                                    },
-                                    {
-                                        type: "text",
-                                        text: `Image from ${img.url}`
                                     }
                                 ]
                             });
