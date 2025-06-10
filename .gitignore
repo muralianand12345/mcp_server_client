@@ -12,7 +12,6 @@ wheels/
 **.env
 **.DS_Store
 upload_manifest.json
-data
 **node_modules
 **yarn.lock
 **uv.lock
@@ -21,6 +20,3 @@ localstack
 workspace/api/mcp-client-poc/chat-logs/
 workspace/api/test
 docker-compose.yaml
-workspace/data_processing/data_processing.ipynb
-docker-compose.yaml
-workspace/api_test

@@ -1,0 +1,74 @@
+[
+    {
+        "ticket_id": "XYZ-2001",
+        "subject": "Technical data page showing detailed engineering diagrams of BFIU device",
+        "description": "Technical data page showing detailed engineering diagrams of BFIU device dimensions from multiple perspectives. Contains four technical drawings: Fig. 3.4 shows device dimensions with cable extension (BFIA + BLAVH1), Fig. 3.5 displays BFIU device dimensions aerial view with circular component in center, Fig. 3.6 presents BFIU device dimensions front view, and Fig. 3.7 illustrates BFIU device dimensions side view.",
+        "customer": {
+            "id": "C8932",
+            "name": "John Davis",
+            "email": "john.davis@example.com",
+            "company": "Acme Corp",
+            "account_type": "Enterprise"
+        },
+        "metadata": {
+            "created_at": "2025-03-12T09:23:45Z",
+            "updated_at": "2025-03-12T14:30:22Z",
+            "status": "resolved",
+            "priority": "medium",
+            "category": "Technical Specifications",
+            "product": "BFIU Device",
+            "version": "3.2.1",
+            "platform": "User Manual",
+            "browser": "Chrome",
+            "images": [
+                {
+                    "s3_key": "tickets/XYZ-2001/image.png",
+                    "description": "Technical diagram showing device dimensions",
+                    "uploaded_at": "2025-03-12T09:25:30Z"
+                }
+            ]
+        },
+        "resolution": {
+            "agent": "Sarah Miller",
+            "resolution_time": "4h 46m",
+            "solution": "Provided technical specifications and installation guidelines for the BFIU device. Referenced diagrams from page 14 of the technical manual to help customer understand the device dimensions.",
+            "tags": ["technical", "dimensions", "diagrams", "installation"]
+        }
+    },
+    {
+        "ticket_id": "XYZ-2002",
+        "subject": "Installation guide for cooktop installation requirements and dimensions",
+        "description": "Installation guide page 26 detailing cooktop installation requirements and dimensions. Contains section 9.4 \"Cut-out dimensions for the cooktop\" with technical specifications for worktop overhang, flush installation, and surface mounting. Features multiple technical diagrams showing precise measurements for different installation methods.",
+        "customer": {
+            "id": "C8933",
+            "name": "Emma Rodriguez",
+            "email": "emma.rodriguez@example.com",
+            "company": "TechSolutions Inc",
+            "account_type": "Premium"
+        },
+        "metadata": {
+            "created_at": "2025-03-13T09:24:46Z",
+            "updated_at": "2025-03-13T14:31:23Z",
+            "status": "in_progress",
+            "priority": "high",
+            "category": "Installation",
+            "product": "BORA Cooktop",
+            "version": "3.2.1",
+            "platform": "Installation Guide",
+            "browser": "Chrome",
+            "images": [
+                {
+                    "s3_key": "tickets/XYZ-2002/image.png",
+                    "description": "Installation diagram showing cut-out dimensions",
+                    "uploaded_at": "2025-03-13T09:26:31Z"
+                }
+            ]
+        },
+        "resolution": {
+            "agent": "Alex Johnson",
+            "resolution_time": "3h 22m",
+            "solution": "Provided detailed installation instructions for the BORA cooktop including proper ventilation requirements (15mm minimum distance, 500cm² return flow aperture). Explained both flush and surface mounting options with reference to the technical diagrams in the installation manual.",
+            "tags": ["installation", "dimensions", "ventilation", "mounting"]
+        }
+    }
+]
