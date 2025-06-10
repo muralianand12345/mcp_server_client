@@ -13,15 +13,16 @@ class Citation:
 
     def to_html(self) -> str:
         """Convert citation to HTML representation."""
-        # Escape any quotes in the text for JavaScript safety
+
         escaped_text = self.text.replace("'", "\\'").replace('"', '\\"')
-        return f'<span class="citation" onclick="openModal(\'{self.image_url}\', \'{escaped_text}\')">{self.text}<div class="citation-tooltip"><img src="{self.image_url}" alt="Citation" class="citation-image" onerror="this.style.display=\'none\'; this.nextElementSibling.textContent=\'Image not available\';"><div class="citation-text">Click to view full size</div></div></span>'
+        escaped_url = self.image_url.replace("'", "\\'")
+
+        return f'''<span class="citation" onclick="openModal('{escaped_url}', '{escaped_text}')">{self.text}<div class="citation-tooltip"><img src="{self.image_url}" alt="Citation" class="citation-image" onerror="console.error('Failed to load image:', this.src); this.style.display='none'; this.nextElementSibling.textContent='Image not available - Check console for details';"><div class="citation-text">Click to view full size</div></div></span>'''
 
 
 class CitationParser:
     """Handles parsing and processing of citation tags in text."""
 
-    # Pattern to match <CIT image_url="URL">content</CIT>
     CITATION_PATTERN = r'<CIT\s+image_url="([^"]+)">([^<]+)</CIT>'
 
     @classmethod
@@ -63,7 +64,6 @@ class CitationParser:
         """
         citations = cls.extract_citations(text)
         processed_text = cls._replace_citations_with_html(text)
-        # Convert line breaks to HTML
         processed_text = cls._format_text_for_html(processed_text)
         return processed_text, citations
 
@@ -82,18 +82,10 @@ class CitationParser:
     @classmethod
     def _format_text_for_html(cls, text: str) -> str:
         """Convert text formatting to HTML."""
-        # Replace multiple consecutive line breaks with paragraph breaks
         text = re.sub(r"\n\s*\n", "</p><p>", text)
-
-        # Replace single line breaks with <br> tags
         text = text.replace("\n", "<br>")
-
-        # Wrap the entire text in paragraph tags
         text = f"<p>{text}</p>"
-
-        # Clean up any empty paragraphs
         text = re.sub(r"<p>\s*</p>", "", text)
-
         return text
 
 
@@ -241,6 +233,7 @@ class CitationRenderer:
     JAVASCRIPT = """
     <script>
     function openModal(imageUrl, altText) {
+        console.log('Opening modal with URL:', imageUrl);
         const modal = document.getElementById('citation-modal');
         const modalImg = document.getElementById('modal-image');
         const modalText = document.getElementById('modal-text');
@@ -248,11 +241,17 @@ class CitationRenderer:
         if (modal && modalImg && modalText) {
             modal.style.display = 'flex';
             modalImg.src = imageUrl;
+            modalImg.onload = function() {
+                console.log('Modal image loaded successfully');
+            };
             modalImg.onerror = function() {
+                console.error('Failed to load modal image:', imageUrl);
                 this.style.display = 'none';
-                modalText.textContent = 'Image could not be loaded';
+                modalText.textContent = 'Image could not be loaded: ' + imageUrl;
             };
             modalText.textContent = altText || 'Citation Image';
+        } else {
+            console.error('Modal elements not found');
         }
     }
 
@@ -265,6 +264,8 @@ class CitationRenderer:
 
     // Initialize event listeners when DOM is ready
     document.addEventListener('DOMContentLoaded', function() {
+        console.log('Citation system initialized');
+        
         // Close modal when clicking outside the content
         window.onclick = function(event) {
             const modal = document.getElementById('citation-modal');
