@@ -22,7 +22,7 @@ export class ConfigService {
     }
 
     get openaiEmbeddingModel(): string {
-        return "text-embedding-ada-002"; //same as the one used in the PGVector
+        return "text-embedding-3-large"; //same as the one used in the PGVector
     }
 
     get s3BucketName(): string {
