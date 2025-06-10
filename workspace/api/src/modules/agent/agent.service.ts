@@ -175,6 +175,8 @@ export class AgentService {
                 }
             }
 
+            console.log(messages); // Debugging: Log the messages being sent to OpenAI
+
             const response = await this.openaiService.getClient().chat.completions.create({
                 model: this.configService.clientOpenAIModel,
                 messages: messages as any

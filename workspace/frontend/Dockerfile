@@ -9,7 +9,7 @@ COPY pyproject.toml ./
 RUN pip install --no-cache-dir streamlit python-dotenv requests
 
 # Copy the application
-COPY app.py ./
+COPY . .
 
 EXPOSE 3001
 

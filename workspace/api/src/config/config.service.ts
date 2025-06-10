@@ -14,11 +14,11 @@ export class ConfigService {
     }
 
     get clientOpenAIModel(): string {
-        return "gpt-4o"; //Used in Agent (Powerful LLM with image support)
+        return "o4-mini"; //Used in Agent (Powerful LLM with image support)
     }
 
     get chatOpenAIModel(): string {
-        return "gpt-4o"; //Used in Tool Agent (LLM with tool support)
+        return "o4-mini"; //Used in Tool Agent (LLM with tool support)
     }
 
     get openaiEmbeddingModel(): string {
