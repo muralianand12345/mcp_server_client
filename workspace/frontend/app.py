@@ -3,6 +3,7 @@ import requests
 import uuid
 import os
 from dotenv import load_dotenv
+
 from citations import CitationParser, CitationRenderer
 
 load_dotenv()
@@ -30,31 +31,17 @@ def query_agent(message):
         response.raise_for_status()
         bot_response = response.json()["response"]
         print(bot_response)  # Debugging line to see the response
-        return bot_response  # Return the raw response, not processed HTML
+        if CitationParser.has_citations(bot_response):
+            processed_content, citations = CitationParser.process_text(bot_response)
+            return CitationRenderer.get_full_html_template(
+                processed_content, len(citations)
+            )
+        else:
+            return f"<div>{bot_response}</div>"
+
     except requests.exceptions.RequestException as e:
         st.error(f"Error connecting to API: {str(e)}")
         return "Sorry, I couldn't connect to the API. Please try again later."
-
-
-def render_message_content(content):
-    """Helper function to render message content with citations if present."""
-    if CitationParser.has_citations(content):
-        processed_content, citations = CitationParser.process_text(content)
-        return CitationRenderer.get_full_html_template(
-            processed_content, len(citations)
-        )
-    else:
-        formatted_content = CitationParser._format_text_for_html(content)
-        return f'<div class="message-content">{formatted_content}</div>'
-
-
-def display_message_content(content):
-    """Display message content, using HTML if it contains citations or formatting."""
-    if CitationParser.has_citations(content) or "\n" in content:
-        html_content = render_message_content(content)
-        st.html(html_content)
-    else:
-        st.write(content)
 
 
 st.title("AI Chat Assistant")
@@ -72,23 +59,18 @@ with col1:
             pass
         st.rerun()
 
-# Display chat history
 for i, message in enumerate(st.session_state.messages):
     with st.chat_message(message["role"]):
-        display_message_content(message["content"])
+        st.write(message["content"])
 
-# Handle new user input
 if prompt := st.chat_input("Type your message here..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.write(prompt)
-
     with st.chat_message("assistant"):
         with st.spinner("Thinking..."):
-            raw_response = query_agent(prompt)
-            st.session_state.messages.append(
-                {"role": "assistant", "content": raw_response}
-            )
-            display_message_content(raw_response)
+            response = query_agent(prompt)
+            st.html(response)
+    st.session_state.messages.append({"role": "assistant", "content": response})
 
 st.caption(f"Session ID: {st.session_state.session_id}")
