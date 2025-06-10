@@ -90,23 +90,26 @@ export class AgentService {
         return systemPrompt;
     }
 
-    private async fetchImageData(urls: string[]): Promise<Array<{ url: string, base64?: string, alt?: string, error?: boolean }>> {
+    private async fetchImageData(urls: string[]): Promise<Array<{ url: string, base64: string, alt: string, error?: boolean }>> {
         return await Promise.all(
             urls.map(async (url: string) => {
                 try {
-                    url = url.replace("http://localhost:4566", "http://localstack:4566");
                     const response = await fetch(url);
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
                     const buffer = await response.arrayBuffer();
                     const base64 = Buffer.from(buffer).toString('base64');
+                    const contentType = response.headers.get('content-type') || 'image/png';
 
                     return {
                         url,
-                        base64: `data:image/png;base64,${base64}`,
+                        base64: `data:${contentType};base64,${base64}`,
                         alt: `Image from ${url.split('/').pop() || 'tool data'}`
                     };
                 } catch (error) {
                     console.error(`Error fetching image from URL ${url}: ${error.message}`);
-                    return { url, error: true };
+                    return { url, base64: '', alt: `Image from ${url}`, error: true };
                 }
             })
         );
@@ -140,12 +143,6 @@ export class AgentService {
                 });
             }
 
-            // Add the current query
-            messages.push({
-                role: "user",
-                content: query
-            });
-
             // Process toolData for images if available
             let toolDataObj: ToolData | null = null;
             if (toolData) {
@@ -162,7 +159,6 @@ export class AgentService {
 
                     // Add image URLs to the messages if available
                     if (urls && urls.length > 0) {
-
                         const imageData = await this.fetchImageData(urls);
                         const validImages = imageData.filter(img => !img.error);
                         for (const img of validImages) {
@@ -176,32 +172,8 @@ export class AgentService {
                                     {
                                         type: "image_url",
                                         image_url: {
-                                            url: img.base64 || img.url,
-                                            detail: "high"
-                                        }
-                                    }
-                                ]
-                            });
-                        }
-                    } else {
-                        //get urls from ragContext if toolData has no urls
-                        const ragUrls = ragContext.match(/https?:\/\/[^\s]+/g) || [];
-                        const imageData = await this.fetchImageData(ragUrls);
-
-                        const validImages = imageData.filter(img => !img.error);
-                        for (const img of validImages) {
-                            messages.push({
-                                role: "user",
-                                content: [
-                                    {
-                                        type: "text",
-                                        text: `Image from ${img.url}`
-                                    },
-                                    {
-                                        type: "image_url",
-                                        image_url: {
-                                            url: img.base64 || img.url,
-                                            detail: "high"
+                                            url: img.base64,
+                                            detail: "auto"
                                         }
                                     }
                                 ]
@@ -213,6 +185,12 @@ export class AgentService {
                     toolDataObj = { urls: [], response: toolData };
                 }
             }
+
+            // Add the current query
+            messages.push({
+                role: "user",
+                content: query
+            });
 
             console.log(messages); // Debugging: Log the messages being sent to OpenAI
 
