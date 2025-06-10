@@ -2,6 +2,12 @@ import { Injectable } from '@nestjs/common';
 import { OpenAIService } from '../../shared/openai/openai.service';
 import { Message } from '../../common/interfaces/message.interface';
 import { ConfigService } from '../../config/config.service';
+import e from 'express';
+
+interface ToolData {
+    urls: string[];
+    response: string;
+};
 
 @Injectable()
 export class AgentService {
@@ -84,6 +90,28 @@ export class AgentService {
         return systemPrompt;
     }
 
+    private async fetchImageData(urls: string[]): Promise<Array<{ url: string, base64?: string, alt?: string, error?: boolean }>> {
+        return await Promise.all(
+            urls.map(async (url: string) => {
+                try {
+                    url = url.replace("http://localhost:4566", "http://localstack:4566");
+                    const response = await fetch(url);
+                    const buffer = await response.arrayBuffer();
+                    const base64 = Buffer.from(buffer).toString('base64');
+
+                    return {
+                        url,
+                        base64: `data:image/png;base64,${base64}`,
+                        alt: `Image from ${url.split('/').pop() || 'tool data'}`
+                    };
+                } catch (error) {
+                    console.error(`Error fetching image from URL ${url}: ${error.message}`);
+                    return { url, error: true };
+                }
+            })
+        );
+    };
+
     // Generate a response using the OpenAI API
     public async generateResponse(
         sessionId: string,
@@ -119,35 +147,46 @@ export class AgentService {
             });
 
             // Process toolData for images if available
-            let toolDataObj: any = null;
+            let toolDataObj: ToolData | null = null;
             if (toolData) {
                 try {
                     toolDataObj = typeof toolData === 'string' ?
                         (toolData.startsWith('{') ? JSON.parse(toolData) : { urls: [], response: toolData })
                         : toolData;
 
+                    if (!toolDataObj) {
+                        throw new Error("Tool data is not in the expected format");
+                    }
+
                     const urls = toolDataObj.urls;
 
                     // Add image URLs to the messages if available
                     if (urls && urls.length > 0) {
-                        const imageData = await Promise.all(
-                            urls.map(async (url: string) => {
-                                try {
-                                    const response = await fetch(url);
-                                    const buffer = await response.arrayBuffer();
-                                    const base64 = Buffer.from(buffer).toString('base64');
 
-                                    return {
-                                        url,
-                                        base64: `data:image/jpeg;base64,${base64}`,
-                                        alt: `Image from ${url.split('/').pop() || 'tool data'}`
-                                    };
-                                } catch (error) {
-                                    console.error(`Error fetching image from URL ${url}: ${error.message}`);
-                                    return { url, error: true };
-                                }
-                            })
-                        );
+                        const imageData = await this.fetchImageData(urls);
+                        const validImages = imageData.filter(img => !img.error);
+                        for (const img of validImages) {
+                            messages.push({
+                                role: "user",
+                                content: [
+                                    {
+                                        type: "text",
+                                        text: `Image from ${img.url}`
+                                    },
+                                    {
+                                        type: "image_url",
+                                        image_url: {
+                                            url: img.base64 || img.url,
+                                            detail: "high"
+                                        }
+                                    }
+                                ]
+                            });
+                        }
+                    } else {
+                        //get urls from ragContext if toolData has no urls
+                        const ragUrls = ragContext.match(/https?:\/\/[^\s]+/g) || [];
+                        const imageData = await this.fetchImageData(ragUrls);
 
                         const validImages = imageData.filter(img => !img.error);
                         for (const img of validImages) {
@@ -161,7 +200,7 @@ export class AgentService {
                                     {
                                         type: "image_url",
                                         image_url: {
-                                            url: img.base64,
+                                            url: img.base64 || img.url,
                                             detail: "high"
                                         }
                                     }
