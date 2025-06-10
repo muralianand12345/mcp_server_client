@@ -1,74 +1,426 @@
 [
     {
-        "ticket_id": "XYZ-2001",
-        "subject": "Technical data page showing detailed engineering diagrams of BFIU device",
-        "description": "Technical data page showing detailed engineering diagrams of BFIU device dimensions from multiple perspectives. Contains four technical drawings: Fig. 3.4 shows device dimensions with cable extension (BFIA + BLAVH1), Fig. 3.5 displays BFIU device dimensions aerial view with circular component in center, Fig. 3.6 presents BFIU device dimensions front view, and Fig. 3.7 illustrates BFIU device dimensions side view.",
+        "ticket_id": "KALI-3001",
+        "subject": "Installation failure with red screen error during Kali Linux setup",
+        "description": "Customer experiencing installation failure with the dreaded 'Red Screen' indicating the installation encountered a problem. Error occurs during the live system copying process with tar write error showing 'No space left on device'. Installation logs show only 152937 out of 286496 files were copied successfully before failure.",
         "customer": {
-            "id": "C8932",
-            "name": "John Davis",
-            "email": "john.davis@example.com",
-            "company": "Acme Corp",
-            "account_type": "Enterprise"
+            "id": "C9001",
+            "name": "Michael Chen",
+            "email": "michael.chen@cybersec.com",
+            "company": "CyberSec Solutions",
+            "account_type": "Professional"
         },
         "metadata": {
-            "created_at": "2025-03-12T09:23:45Z",
-            "updated_at": "2025-03-12T14:30:22Z",
+            "created_at": "2025-01-15T10:15:30Z",
+            "updated_at": "2025-01-15T16:45:22Z",
             "status": "resolved",
-            "priority": "medium",
-            "category": "Technical Specifications",
-            "product": "BFIU Device",
-            "version": "3.2.1",
-            "platform": "User Manual",
-            "browser": "Chrome",
+            "priority": "high",
+            "category": "Installation Issues",
+            "product": "Kali Linux",
+            "version": "1.0.7",
+            "platform": "x64",
+            "browser": "N/A",
             "images": [
                 {
-                    "s3_key": "tickets/XYZ-2001/image.png",
-                    "description": "Technical diagram showing device dimensions",
-                    "uploaded_at": "2025-03-12T09:25:30Z"
+                    "s3_key": "tickets/KALI-3001/red_screen_error.png",
+                    "description": "Screenshot of installation red screen error",
+                    "uploaded_at": "2025-01-15T10:17:45Z"
+                },
+                {
+                    "s3_key": "tickets/KALI-3001/debug_logs.png",
+                    "description": "Installation debug logs showing disk space error",
+                    "uploaded_at": "2025-01-15T10:18:20Z"
                 }
             ]
         },
         "resolution": {
-            "agent": "Sarah Miller",
-            "resolution_time": "4h 46m",
-            "solution": "Provided technical specifications and installation guidelines for the BFIU device. Referenced diagrams from page 14 of the technical manual to help customer understand the device dimensions.",
-            "tags": ["technical", "dimensions", "diagrams", "installation"]
+            "agent": "David Kumar",
+            "resolution_time": "6h 30m",
+            "solution": "Identified insufficient disk space as the root cause. Customer needed minimum 10GB but only had 8GB available. Guided customer through partition resizing and successful reinstallation with adequate disk space.",
+            "tags": ["installation", "disk-space", "debug-logs", "red-screen"]
         }
     },
     {
-        "ticket_id": "XYZ-2002",
-        "subject": "Installation guide for cooktop installation requirements and dimensions",
-        "description": "Installation guide page 26 detailing cooktop installation requirements and dimensions. Contains section 9.4 \"Cut-out dimensions for the cooktop\" with technical specifications for worktop overhang, flush installation, and surface mounting. Features multiple technical diagrams showing precise measurements for different installation methods.",
+        "ticket_id": "KALI-3002",
+        "subject": "Raspberry Pi ARM image boot configuration and SSH key security warning",
+        "description": "Customer needs assistance with Kali Linux ARM image setup on Raspberry Pi. Requires guidance on proper dd imaging process, boot configuration, and critical security warning about changing default SSH host keys. Customer reported successful imaging but concerned about security implications of default keys shared across all RPI images.",
         "customer": {
-            "id": "C8933",
-            "name": "Emma Rodriguez",
-            "email": "emma.rodriguez@example.com",
-            "company": "TechSolutions Inc",
-            "account_type": "Premium"
+            "id": "C9002",
+            "name": "Sarah Williams",
+            "email": "sarah.williams@iotlabs.com",
+            "company": "IoT Security Labs",
+            "account_type": "Enterprise"
         },
         "metadata": {
-            "created_at": "2025-03-13T09:24:46Z",
-            "updated_at": "2025-03-13T14:31:23Z",
-            "status": "in_progress",
-            "priority": "high",
-            "category": "Installation",
-            "product": "BORA Cooktop",
-            "version": "3.2.1",
-            "platform": "Installation Guide",
-            "browser": "Chrome",
+            "created_at": "2025-01-16T08:30:15Z",
+            "updated_at": "2025-01-16T12:20:33Z",
+            "status": "resolved",
+            "priority": "medium",
+            "category": "ARM Installation",
+            "product": "Kali Linux ARM",
+            "version": "1.0.3",
+            "platform": "Raspberry Pi",
+            "browser": "N/A",
             "images": [
                 {
-                    "s3_key": "tickets/XYZ-2002/image.png",
-                    "description": "Installation diagram showing cut-out dimensions",
-                    "uploaded_at": "2025-03-13T09:26:31Z"
+                    "s3_key": "tickets/KALI-3002/rpi_setup_diagram.png",
+                    "description": "Raspberry Pi setup and connection diagram",
+                    "uploaded_at": "2025-01-16T08:32:10Z"
                 }
             ]
         },
         "resolution": {
-            "agent": "Alex Johnson",
-            "resolution_time": "3h 22m",
-            "solution": "Provided detailed installation instructions for the BORA cooktop including proper ventilation requirements (15mm minimum distance, 500cm² return flow aperture). Explained both flush and surface mounting options with reference to the technical diagrams in the installation manual.",
-            "tags": ["installation", "dimensions", "ventilation", "mounting"]
+            "agent": "Maria Lopez",
+            "resolution_time": "3h 50m",
+            "solution": "Provided complete Raspberry Pi setup instructions including proper dd command usage and critical SSH security steps. Walked customer through SSH host key regeneration process: rm /etc/ssh/ssh_host_*, dpkg-reconfigure openssh-server, service ssh restart. Emphasized importance of changing root password for publicly accessible systems.",
+            "tags": [
+                "raspberry-pi",
+                "arm",
+                "ssh-security",
+                "dd-imaging",
+                "boot-setup"
+            ]
+        }
+    },
+    {
+        "ticket_id": "KALI-3003",
+        "subject": "VMware Tools installation failure and kernel compatibility issues",
+        "description": "Customer experiencing VMware Tools compilation failures in Kali Linux guest VM. Error occurs during kernel module compilation with version 3.14 kernel. Customer reports missing kernel headers and compatibility issues between VMware tools version and current bleeding-edge kernel. Requires patches for successful installation.",
+        "customer": {
+            "id": "C9003",
+            "name": "Robert Anderson",
+            "email": "robert.anderson@pentestcorp.com",
+            "company": "PenTest Corporation",
+            "account_type": "Premium"
+        },
+        "metadata": {
+            "created_at": "2025-01-17T14:20:12Z",
+            "updated_at": "2025-01-17T18:15:44Z",
+            "status": "in_progress",
+            "priority": "high",
+            "category": "Virtualization",
+            "product": "Kali Linux",
+            "version": "3.14",
+            "platform": "VMware",
+            "browser": "N/A",
+            "images": [
+                {
+                    "s3_key": "tickets/KALI-3003/kernel_version_output.png",
+                    "description": "uname -r kernel version output",
+                    "uploaded_at": "2025-01-17T14:23:15Z"
+                }
+            ]
+        },
+        "resolution": {
+            "agent": "Jennifer Zhang",
+            "resolution_time": "4h 15m",
+            "solution": "Provided step-by-step VMware Tools installation guide including required kernel headers installation. Directed customer to Kali VMware Tool Patches GitHub repository for kernel 3.14 compatibility patches. Alternative solution offered: install open-vm-toolbox package for easier compatibility.",
+            "tags": [
+                "vmware",
+                "kernel-compatibility",
+                "compilation-error",
+                "patches",
+                "virtualization"
+            ]
+        }
+    },
+    {
+        "ticket_id": "KALI-3004",
+        "subject": "Dual boot GRUB configuration and Windows partition resizing issues",
+        "description": "Customer attempting to set up Kali Linux dual boot with Windows 7 experiencing issues with partition resizing using gparted and GRUB bootloader configuration. Windows partition needs to be shrunk to 8GB minimum for Kali installation. Customer reports successful partition resize but GRUB menu not appearing on boot.",
+        "customer": {
+            "id": "C9004",
+            "name": "Lisa Thompson",
+            "email": "lisa.thompson@infosec.edu",
+            "company": "InfoSec University",
+            "account_type": "Educational"
+        },
+        "metadata": {
+            "created_at": "2025-01-18T11:45:20Z",
+            "updated_at": "2025-01-18T15:30:15Z",
+            "status": "resolved",
+            "priority": "medium",
+            "category": "Installation",
+            "product": "Kali Linux",
+            "version": "1.0",
+            "platform": "Dual Boot",
+            "browser": "N/A",
+            "images": [
+                {
+                    "s3_key": "tickets/KALI-3004/gparted_partition_resize.png",
+                    "description": "GParted showing Windows partition resize operation",
+                    "uploaded_at": "2025-01-18T11:47:35Z"
+                },
+                {
+                    "s3_key": "tickets/KALI-3004/grub_boot_menu.png",
+                    "description": "GRUB boot menu showing Kali and Windows options",
+                    "uploaded_at": "2025-01-18T11:48:10Z"
+                },
+                {
+                    "s3_key": "tickets/KALI-3004/disk_partitioning_scheme.png",
+                    "description": "Final disk partitioning scheme after installation",
+                    "uploaded_at": "2025-01-18T11:49:22Z"
+                }
+            ]
+        },
+        "resolution": {
+            "agent": "Thomas Wilson",
+            "resolution_time": "3h 45m",
+            "solution": "Guided customer through complete dual boot setup process. Issue was UEFI/Legacy boot mode mismatch. Helped configure BIOS settings for proper boot sequence and GRUB installation to MBR. Customer successfully boots into both Kali Linux and Windows 7 with working GRUB menu.",
+            "tags": [
+                "dual-boot",
+                "grub",
+                "partition-resize",
+                "gparted",
+                "windows"
+            ]
+        }
+    },
+    {
+        "ticket_id": "KALI-3005",
+        "subject": "NVIDIA driver installation and CUDA compatibility for password cracking tools",
+        "description": "Customer needs assistance installing NVIDIA drivers for GPU-accelerated password cracking with cudaHashcat-plus. Installation of nvidia-kernel-dkms package completed but getting 'direct rendering: No' error. Customer requires CUDA support for penetration testing tools and proper 3D acceleration functionality.",
+        "customer": {
+            "id": "C9005",
+            "name": "James Rodriguez",
+            "email": "james.rodriguez@redteam.com",
+            "company": "Red Team Security",
+            "account_type": "Professional"
+        },
+        "metadata": {
+            "created_at": "2025-01-19T09:15:30Z",
+            "updated_at": "2025-01-19T14:20:45Z",
+            "status": "resolved",
+            "priority": "high",
+            "category": "Hardware Drivers",
+            "product": "Kali Linux",
+            "version": "1.0",
+            "platform": "x64",
+            "browser": "N/A",
+            "images": [
+                {
+                    "s3_key": "tickets/KALI-3005/nvidia_driver_installation.png",
+                    "description": "NVIDIA driver installation process output",
+                    "uploaded_at": "2025-01-19T09:17:45Z"
+                },
+                {
+                    "s3_key": "tickets/KALI-3005/cudahashcat_benchmark.png",
+                    "description": "cudaHashcat-plus benchmark results with GPU acceleration",
+                    "uploaded_at": "2025-01-19T09:19:55Z"
+                }
+            ]
+        },
+        "resolution": {
+            "agent": "Amanda Singh",
+            "resolution_time": "5h 05m",
+            "solution": "Resolved NVIDIA driver issues by disabling nouveau driver and updating GRUB configuration. Added 'nouveau.modeset=0' to kernel parameters and rebuilt initramfs. Customer now has working CUDA acceleration with 'direct rendering: Yes' confirmed. Successfully tested with cudaHashcat-plus showing GPU detection and password recovery functionality.",
+            "tags": [
+                "nvidia",
+                "cuda",
+                "gpu-acceleration",
+                "password-cracking",
+                "drivers"
+            ]
+        }
+    },
+    {
+        "ticket_id": "KALI-3006",
+        "subject": "Custom ARM image compilation for Samsung Chromebook with kernel patches",
+        "description": "Advanced user requesting guidance on building custom Kali ARM image for Samsung Chromebook including Chromium kernel compilation with wireless injection patches. Customer needs help with cross-compilation environment setup, kernel configuration, and cgpt partitioning for Chrome OS bootloader compatibility.",
+        "customer": {
+            "id": "C9006",
+            "name": "Kevin Park",
+            "email": "kevin.park@armdev.com",
+            "company": "ARM Development Solutions",
+            "account_type": "Developer"
+        },
+        "metadata": {
+            "created_at": "2025-01-20T13:30:25Z",
+            "updated_at": "2025-01-20T17:45:12Z",
+            "status": "in_progress",
+            "priority": "medium",
+            "category": "ARM Development",
+            "product": "Kali Linux ARM",
+            "version": "Custom Build",
+            "platform": "Samsung Chromebook",
+            "browser": "N/A",
+            "images": [
+            ]
+        },
+        "resolution": {
+            "agent": "Ryan Mitchell",
+            "resolution_time": "4h 15m",
+            "solution": "Provided comprehensive guide for Samsung Chromebook custom image building including Linaro toolchain setup, Chromium kernel source compilation with wireless patches, and proper cgpt partitioning. Customer successfully created bootable image with CTRL+U boot capability and functional wireless injection support.",
+            "tags": [
+                "chromebook",
+                "arm-compilation",
+                "kernel-patches",
+                "cgpt",
+                "wireless-injection"
+            ]
+        }
+    },
+    {
+        "ticket_id": "KALI-3007",
+        "subject": "Metasploit Framework PostgreSQL database connection failures and service startup issues",
+        "description": "Customer experiencing issues starting Metasploit Framework with database support. PostgreSQL service starts successfully on port 5432, but msfconsole shows database connection errors. Customer reports 'db_status' command returns connection failed instead of expected 'postgresql connected to msf3'. Metasploit service fails to create msf3 database user automatically.",
+        "customer": {
+            "id": "C9007",
+            "name": "Daniel Kim",
+            "email": "daniel.kim@pentestpro.com",
+            "company": "PentestPro Services",
+            "account_type": "Enterprise"
+        },
+        "metadata": {
+            "created_at": "2025-01-21T10:20:15Z",
+            "updated_at": "2025-01-21T15:35:22Z",
+            "status": "resolved",
+            "priority": "high",
+            "category": "Framework Configuration",
+            "product": "Metasploit Framework",
+            "version": "Latest",
+            "platform": "Kali Linux",
+            "browser": "N/A",
+            "images": [
+                {
+                    "s3_key": "tickets/KALI-3007/postgresql_service_status.png",
+                    "description": "PostgreSQL service status showing port 5432 listening",
+                    "uploaded_at": "2025-01-21T10:22:30Z"
+                }
+            ]
+        },
+        "resolution": {
+            "agent": "Chris Patterson",
+            "resolution_time": "5h 15m",
+            "solution": "Resolved Metasploit database issues by proper service initialization sequence. Guided customer through: 1) service postgresql start, 2) service metasploit start for automatic msf3 database creation, 3) verified connection with ss -ant showing port 5432 listening. Customer now has working Metasploit with database support and can use update-rc.d for startup persistence.",
+            "tags": [
+                "metasploit",
+                "postgresql",
+                "database",
+                "service-startup",
+                "msfconsole"
+            ]
+        }
+    },
+    {
+        "ticket_id": "KALI-3008",
+        "subject": "LUKS encrypted disk installation setup and boot passphrase configuration",
+        "description": "Customer attempting to set up full disk encryption using LUKS during Kali installation. Selected 'Guided - use entire disk and set up encrypted LVM' option but experiencing issues with encryption passphrase prompt at boot. Customer needs guidance on encryption password requirements and boot process for encrypted USB installation.",
+        "customer": {
+            "id": "C9008",
+            "name": "Angela Foster",
+            "email": "angela.foster@datasec.org",
+            "company": "DataSec Research",
+            "account_type": "Professional"
+        },
+        "metadata": {
+            "created_at": "2025-01-22T08:45:12Z",
+            "updated_at": "2025-01-22T13:20:35Z",
+            "status": "resolved",
+            "priority": "medium",
+            "category": "Disk Encryption",
+            "product": "Kali Linux",
+            "version": "1.0.7",
+            "platform": "USB Installation",
+            "browser": "N/A",
+            "images": [
+            ]
+        },
+        "resolution": {
+            "agent": "Michelle Davis",
+            "resolution_time": "4h 35m",
+            "solution": "Successfully guided customer through LUKS encrypted installation process. Explained encryption password requirements and boot sequence. Customer now understands that passphrase must be entered on every boot and has working encrypted Kali installation on USB drive with proper BIOS USB boot configuration.",
+            "tags": [
+                "luks",
+                "encryption",
+                "lvm",
+                "usb-installation",
+                "boot-passphrase"
+            ]
+        }
+    },
+    {
+        "ticket_id": "KALI-3009",
+        "subject": "PXE network boot server configuration with dnsmasq and TFTP setup issues",
+        "description": "Customer setting up PXE network installation server for enterprise Kali deployment. Issues with dnsmasq configuration for DHCP/TFTP services and netboot image deployment. Customer reports DHCP range conflicts and clients not receiving PXE boot options. Requires guidance on proper dnsmasq.conf configuration and tftp-root directory structure.",
+        "customer": {
+            "id": "C9009",
+            "name": "Marcus Johnson",
+            "email": "marcus.johnson@netops.com",
+            "company": "NetOps Enterprise",
+            "account_type": "Enterprise"
+        },
+        "metadata": {
+            "created_at": "2025-01-23T14:15:40Z",
+            "updated_at": "2025-01-23T18:50:22Z",
+            "status": "in_progress",
+            "priority": "high",
+            "category": "Network Installation",
+            "product": "Kali Linux",
+            "version": "PXE Netboot",
+            "platform": "Server Deployment",
+            "browser": "N/A",
+            "images": [
+                {
+                    "s3_key": "tickets/KALI-3009/dnsmasq_configuration.png",
+                    "description": "dnsmasq.conf configuration file for PXE boot",
+                    "uploaded_at": "2025-01-23T14:17:55Z"
+                }
+            ]
+        },
+        "resolution": {
+            "agent": "Steven Liu",
+            "resolution_time": "4h 35m",
+            "solution": "Configured PXE server with proper dnsmasq settings including interface=eth0, dhcp-range=192.168.101.100,192.168.101.200,12h, dhcp-boot=pxelinux.0, enable-tftp, and tftp-root=/tftpboot/. Downloaded appropriate netboot.tar.gz for customer's architecture and extracted to /tftpboot. Client machines now successfully PXE boot into Kali installation.",
+            "tags": [
+                "pxe",
+                "dnsmasq",
+                "tftp",
+                "netboot",
+                "enterprise-deployment"
+            ]
+        }
+    },
+    {
+        "ticket_id": "KALI-3010",
+        "subject": "Bug tracker account creation and proper bug report submission formatting",
+        "description": "Customer needs assistance with Kali Linux bug tracker usage at bugs.kali.org. Successfully created account but unclear on proper bug report formatting and categorization. Customer experiencing package installation issues with chromium browser and wants to submit detailed bug report with appropriate logs and system information following best practices.",
+        "customer": {
+            "id": "C9010",
+            "name": "Patricia Wong",
+            "email": "patricia.wong@bugtest.com",
+            "company": "Quality Assurance Labs",
+            "account_type": "Professional"
+        },
+        "metadata": {
+            "created_at": "2025-01-24T11:30:18Z",
+            "updated_at": "2025-01-24T16:15:42Z",
+            "status": "resolved",
+            "priority": "low",
+            "category": "Bug Reporting",
+            "product": "Kali Bug Tracker",
+            "version": "Web Interface",
+            "platform": "bugs.kali.org",
+            "browser": "Firefox",
+            "images": [
+                {
+                    "s3_key": "tickets/KALI-3010/bug_tracker_signup.png",
+                    "description": "Bug tracker account creation and profile setup",
+                    "uploaded_at": "2025-01-24T11:32:35Z"
+                }
+            ]
+        },
+        "resolution": {
+            "agent": "Rachel Green",
+            "resolution_time": "4h 45m",
+            "solution": "Educated customer on proper bug report submission including: creating descriptive summaries, using dpkg commands for package information, providing reproduction steps, and selecting appropriate categories (General Bug, Kali Package Bug, New Tool Requests, Tool Upgrade). Customer successfully submitted well-formatted bug report for chromium package with proper system profile and supporting logs.",
+            "tags": [
+                "bug-tracker",
+                "bug-reporting",
+                "chromium",
+                "dpkg",
+                "system-profile"
+            ]
         }
     }
 ]
