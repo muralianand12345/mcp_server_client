@@ -13,11 +13,16 @@ class Citation:
 
     def to_html(self) -> str:
         """Convert citation to HTML representation."""
+        # Escape quotes in the image URL and text for JavaScript safety
+        escaped_url = self.image_url.replace("'", "\\'").replace('"', '\\"')
+        escaped_text = self.text.replace("'", "\\'").replace('"', '\\"')
+
         return f'''
-        <span class="citation" onclick="openModal('{self.image_url}', '{self.text}')">
+        <span class="citation" onclick="openModal('{escaped_url}', '{escaped_text}')">
             {self.text}
             <div class="citation-tooltip">
-                <img src="{self.image_url}" alt="Citation" class="citation-image"  onerror="this.style.display='none'; this.nextElementSibling.textContent='Image not available';">
+                <img src="{self.image_url}" alt="Citation" class="citation-image" onerror="this.style.display='none'; this.nextElementSibling.style.display='block'; this.nextElementSibling.textContent='Image not available: {self.image_url}';">
+                <div style="display:none; color:#666; font-size:12px; text-align:center; margin-top:8px;"></div>
             </div>
         </span>
         '''
@@ -44,8 +49,11 @@ class CitationParser:
         citations = []
 
         for match in matches:
-            image_url = match.group(1)
-            citation_text = match.group(2)
+            image_url = match.group(1).strip()
+            # Clean up URL by removing trailing ? or other unwanted characters
+            if image_url.endswith("?"):
+                image_url = image_url[:-1]
+            citation_text = match.group(2).strip()
             citations.append(Citation(image_url, citation_text))
 
         return citations
@@ -75,8 +83,11 @@ class CitationParser:
         """Replace citation tags with interactive HTML."""
 
         def replace_citation(match):
-            image_url = match.group(1)
-            citation_text = match.group(2)
+            image_url = match.group(1).strip()
+            # Clean up URL by removing trailing ? or other unwanted characters
+            if image_url.endswith("?"):
+                image_url = image_url[:-1]
+            citation_text = match.group(2).strip()
             citation = Citation(image_url, citation_text)
             return citation.to_html()
 
@@ -88,20 +99,43 @@ class CitationRenderer:
 
     CSS_STYLES = """
     <style>
+    /* Message content container with proper font inheritance */
+    .message-content {
+        font-family: inherit;
+        font-size: inherit;
+        line-height: inherit;
+        color: inherit;
+        margin: 0;
+        padding: 0;
+    }
+
+    /* Citation styling that preserves parent font properties */
     .citation {
         position: relative;
         color: #1f77b4;
         text-decoration: underline;
         cursor: pointer;
-        font-weight: 500;
+        font-weight: inherit;
+        font-family: inherit;
+        font-size: inherit;
+        line-height: inherit;
+        display: inline;
         transition: all 0.2s ease;
+        /* Ensure citations don't break text flow */
+        white-space: inherit;
+        word-wrap: inherit;
+        overflow-wrap: inherit;
     }
 
     .citation:hover {
         color: #0066cc;
-        background-color: #f0f8ff;
+        background-color: rgba(240, 248, 255, 0.8);
         border-radius: 3px;
         padding: 1px 3px;
+        /* Maintain font properties on hover */
+        font-weight: inherit;
+        font-family: inherit;
+        font-size: inherit;
     }
 
     .citation-tooltip {
@@ -119,6 +153,11 @@ class CitationRenderer:
         transition: opacity 0.3s, visibility 0.3s;
         pointer-events: none;
         transform: translateY(-10px);
+        /* Reset font properties for tooltip */
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-size: 14px;
+        font-weight: normal;
+        line-height: 1.4;
     }
 
     .citation:hover .citation-tooltip {
@@ -142,6 +181,7 @@ class CitationRenderer:
         color: #666;
         font-style: italic;
         text-align: center;
+        font-family: inherit;
     }
 
     .citation-modal {
@@ -156,6 +196,8 @@ class CitationRenderer:
         justify-content: center;
         align-items: center;
         backdrop-filter: blur(2px);
+        /* Reset font properties for modal */
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     }
 
     .citation-modal-content {
@@ -167,6 +209,9 @@ class CitationRenderer:
         overflow: auto;
         position: relative;
         box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        font-family: inherit;
+        font-size: 14px;
+        line-height: 1.4;
     }
 
     .citation-modal img {
@@ -191,6 +236,7 @@ class CitationRenderer:
         justify-content: center;
         box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         transition: all 0.2s ease;
+        font-family: inherit;
     }
 
     .close-modal:hover {
@@ -208,6 +254,43 @@ class CitationRenderer:
         font-size: 10px;
         margin-left: 4px;
         vertical-align: super;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-weight: 500;
+        line-height: 1.2;
+    }
+
+    /* Ensure proper text rendering and spacing */
+    .message-content p {
+        margin: 0 0 1em 0;
+        font-family: inherit;
+        font-size: inherit;
+        font-weight: inherit;
+        line-height: inherit;
+    }
+
+    .message-content p:last-child {
+        margin-bottom: 0;
+    }
+
+    /* Handle different text elements within citations */
+    .citation strong {
+        font-weight: bold;
+        font-family: inherit;
+        font-size: inherit;
+    }
+
+    .citation em {
+        font-style: italic;
+        font-family: inherit;
+        font-size: inherit;
+    }
+
+    .citation code {
+        font-family: 'SFMono-Regular', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+        font-size: 0.9em;
+        background-color: rgba(175, 184, 193, 0.2);
+        padding: 0.2em 0.4em;
+        border-radius: 3px;
     }
     </style>
     """
@@ -215,6 +298,7 @@ class CitationRenderer:
     JAVASCRIPT = """
     <script>
     function openModal(imageUrl, altText) {
+        console.log('Opening modal with URL:', imageUrl); // Debug logging
         const modal = document.getElementById('citation-modal');
         const modalImg = document.getElementById('modal-image');
         const modalText = document.getElementById('modal-text');
@@ -223,10 +307,16 @@ class CitationRenderer:
             modal.style.display = 'flex';
             modalImg.src = imageUrl;
             modalImg.onerror = function() {
+                console.error('Failed to load image:', imageUrl); // Debug logging
                 this.style.display = 'none';
-                modalText.textContent = 'Image could not be loaded';
+                modalText.textContent = 'Image could not be loaded: ' + imageUrl;
+                modalText.style.color = '#e74c3c';
             };
-            modalText.textContent = altText || 'Citation Image';
+            modalImg.onload = function() {
+                console.log('Image loaded successfully:', imageUrl); // Debug logging
+                modalText.textContent = altText || 'Citation Image';
+                modalText.style.color = '#333';
+            };
         }
     }
 

@@ -33,7 +33,7 @@ class RAG:
         """
 
     def _generate_embedding(
-        self, text: str, embedding_model: str = "text-embedding-ada-002"
+        self, text: str, embedding_model: str = "text-embedding-3-large"
     ) -> List[float]:
         text = text.replace("\n", " ")
         return (
