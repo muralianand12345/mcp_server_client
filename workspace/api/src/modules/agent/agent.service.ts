@@ -163,11 +163,11 @@ export class AgentService {
                         const validImages = imageData.filter(img => !img.error);
                         for (const img of validImages) {
                             messages.push({
-                                role: "user",
+                                role: "system",
                                 content: [
                                     {
                                         type: "text",
-                                        text: `Image from ${img.url}`
+                                        text: `RAG Image from ${img.url}`
                                     },
                                     {
                                         type: "image_url",

@@ -34,7 +34,7 @@ export class ConfigService {
     }
 
     get databaseUrl(): string {
-        return this.configService.get<string>('DATABASE_URL') ||
+        return this.configService.get<string>('POSTGRES_URL') ||
             'postgresql://postgres:postgres@localhost:5432/postgres';
     }
 

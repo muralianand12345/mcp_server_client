@@ -55,7 +55,7 @@ with col1:
                 f"{API_URL}/chat", headers={"session-id": st.session_state.session_id}
             )
             st.session_state.session_id = str(uuid.uuid4())
-        except:
+        except Exception:
             pass
         st.rerun()
 

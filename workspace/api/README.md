@@ -85,7 +85,7 @@ src/
 
 - `PORT`: API port (default: 3000)
 - `OPENAI_API_KEY`: Your OpenAI API key
-- `DATABASE_URL`: PostgreSQL connection URL
+- `POSTGRES_URL`: PostgreSQL connection URL
 - `S3_BUCKET_NAME`: S3 bucket name for images (default: xyz-support-images)
 - `MCP_S3_URL`: URL for S3 MCP service
 - `MCP_POSTGRES_URL`: URL for PostgreSQL MCP service

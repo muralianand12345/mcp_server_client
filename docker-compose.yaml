@@ -45,92 +45,92 @@ services:
             - mcp-network
 
     # MCP Server 1 (S3 Search Service)
-    mcp_server1:
-        build:
-            context: .
-            dockerfile: ./workspace/servers/Dockerfile.mcp_server1
-        container_name: mcp_server1
-        ports:
-            - "8001:8001"
-        env_file:
-            - .env
-        environment:
-            - PYTHONUNBUFFERED=1
-            - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-            - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-            - AWS_REGION=${AWS_REGION}
-            - AWS_ENDPOINT_URL=${AWS_ENDPOINT_URL}
-        depends_on:
-            - localstack
-        command: python /app/workspace/servers/mcp_server_1.py
-        networks:
-            - mcp-network
+    # mcp_server1:
+    #     build:
+    #         context: .
+    #         dockerfile: ./workspace/servers/Dockerfile.mcp_server1
+    #     container_name: mcp_server1
+    #     ports:
+    #         - "8001:8001"
+    #     env_file:
+    #         - .env
+    #     environment:
+    #         - PYTHONUNBUFFERED=1
+    #         - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+    #         - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+    #         - AWS_REGION=${AWS_REGION}
+    #         - AWS_ENDPOINT_URL=${AWS_ENDPOINT_URL}
+    #     depends_on:
+    #         - localstack
+    #     command: python /app/workspace/servers/mcp_server_1.py
+    #     networks:
+    #         - mcp-network
 
-    # MCP Server 2 (Postgres Search Service)
-    mcp_server2:
-        build:
-            context: .
-            dockerfile: ./workspace/servers/Dockerfile.mcp_server2
-        container_name: mcp_server2
-        ports:
-            - "8002:8002"
-        env_file:
-            - .env
-        environment:
-            - PYTHONUNBUFFERED=1
-            - POSTGRES_USER=${POSTGRES_USER}
-            - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-            - POSTGRES_DB=${POSTGRES_DB}
-            - POSTGRES_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable
-        depends_on:
-            postgres:
-                condition: service_healthy
-        command: python /app/workspace/servers/mcp_server_2.py
-        networks:
-            - mcp-network
+    # # MCP Server 2 (Postgres Search Service)
+    # mcp_server2:
+    #     build:
+    #         context: .
+    #         dockerfile: ./workspace/servers/Dockerfile.mcp_server2
+    #     container_name: mcp_server2
+    #     ports:
+    #         - "8002:8002"
+    #     env_file:
+    #         - .env
+    #     environment:
+    #         - PYTHONUNBUFFERED=1
+    #         - POSTGRES_USER=${POSTGRES_USER}
+    #         - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    #         - POSTGRES_DB=${POSTGRES_DB}
+    #         - POSTGRES_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable
+    #     depends_on:
+    #         postgres:
+    #             condition: service_healthy
+    #     command: python /app/workspace/servers/mcp_server_2.py
+    #     networks:
+    #         - mcp-network
 
-    # NestJS API
-    api:
-        build:
-            context: ./workspace/api/
-            dockerfile: Dockerfile
-        container_name: mcp_api
-        ports:
-            - "3000:3000"
-        env_file:
-            - .env
-        environment:
-            - PORT=3000
-            - OPENAI_API_KEY=${OPENAI_API_KEY}
-            - DATABASE_URL=${POSTGRES_URL}
-            - S3_BUCKET_NAME=${S3_BUCKET_NAME}
-            - MCP_S3_URL=http://mcp_server1:8001/sse
-            - MCP_POSTGRES_URL=http://mcp_server2:8002/sse
-        depends_on:
-            - mcp_server1
-            - mcp_server2
-        command: >
-            sh -c "sleep 10 && npm run build && npm run start"
-        networks:
-            - mcp-network
+    # # NestJS API
+    # api:
+    #     build:
+    #         context: ./workspace/api/
+    #         dockerfile: Dockerfile
+    #     container_name: mcp_api
+    #     ports:
+    #         - "3000:3000"
+    #     env_file:
+    #         - .env
+    #     environment:
+    #         - PORT=3000
+    #         - OPENAI_API_KEY=${OPENAI_API_KEY}
+    #         - POSTGRES_URL=${POSTGRES_URL}
+    #         - S3_BUCKET_NAME=${S3_BUCKET_NAME}
+    #         - MCP_S3_URL=http://mcp_server1:8001/sse
+    #         - MCP_POSTGRES_URL=http://mcp_server2:8002/sse
+    #     depends_on:
+    #         - mcp_server1
+    #         - mcp_server2
+    #     command: >
+    #         sh -c "sleep 10 && npm run build && npm run start"
+    #     networks:
+    #         - mcp-network
 
-    # Streamlit UI
-    streamlit:
-        build:
-            context: ./workspace/frontend
-            dockerfile: Dockerfile
-        container_name: mcp_streamlit
-        ports:
-            - "3001:3001"
-        environment:
-            - PYTHONUNBUFFERED=1
-            - API_URL=http://api:3000
-        depends_on:
-            - api
-            - mcp_server1
-            - mcp_server2
-        networks:
-            - mcp-network
+    # # Streamlit UI
+    # streamlit:
+    #     build:
+    #         context: ./workspace/frontend
+    #         dockerfile: Dockerfile
+    #     container_name: mcp_streamlit
+    #     ports:
+    #         - "3001:3001"
+    #     environment:
+    #         - PYTHONUNBUFFERED=1
+    #         - API_URL=http://api:3000
+    #     depends_on:
+    #         - api
+    #         - mcp_server1
+    #         - mcp_server2
+    #     networks:
+    #         - mcp-network
 
 # Network configuration
 networks:
